@@ -18,10 +18,6 @@ warn() {
   printf "%s[*] %s%s\n" "$(tput setaf 3)" "$1" "$reset_color"
 }
 
-source_term() {
-  source ~/.zshrc
-}
-
 in_cmd() {
   hash "$@" &> /dev/null
 }

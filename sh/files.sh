@@ -50,7 +50,6 @@ rename_folders() {
 sym_stow() {
   info "Symlinking dot files..."
   stow -d ~/dotfiles/stow -t ~ .
-  source_term
 }
 
 # Create .zshrc.local if it doesn't exist
