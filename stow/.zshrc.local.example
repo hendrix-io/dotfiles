@@ -1,0 +1,14 @@
+# Machine-specific configuration
+# Copy this to ~/.zshrc.local and customize for your machine
+# DO NOT commit .zshrc.local - it's gitignored
+
+# PATH modifications (customize for your system)
+# export PATH=/usr/local/bin:/opt/homebrew/bin:$PATH
+
+# Secrets (NEVER commit these!)
+# export NEXUS_TOKEN=your_token_here
+
+# Machine-specific tool paths
+# export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+# export PATH="$(npm config get prefix)/bin:$PATH"
+# export PATH="$HOME/.local/bin:$PATH"

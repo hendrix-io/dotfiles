@@ -1,0 +1,2 @@
+# Never commit machine-specific config or secrets
+.zshrc.local

@@ -1,0 +1,21 @@
+format = """
+$username\
+$directory\
+$git_branch\
+$git_metrics\
+$character"""
+
+[username]
+show_always=true
+
+# ~/.config/starship.toml
+
+[character]
+success_symbol = '[❯](bold green) '
+error_symbol = '[✗](bold red) '
+
+[git_metrics]
+disabled=false
+
+[git_branch]
+symbol=' '
