@@ -23,6 +23,7 @@ success "Packages updated"
 
 install_stow
 install_starship
+install_ghostty
 success "Core tools installed"
 
 install_nvm

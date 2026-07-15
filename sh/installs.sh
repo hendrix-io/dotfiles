@@ -69,3 +69,14 @@ install_bun() {
     success "bun installed"
   fi
 }
+
+# Install ghostty terminal
+install_ghostty() {
+  if in_cmd "ghostty"; then
+    info "ghostty is already installed. Skipping."
+  else
+    info "Installing ghostty..."
+    brew install --cask ghostty
+    success "ghostty installed"
+  fi
+}

@@ -13,6 +13,7 @@ folders=(
 mk_folders=(
   ~/.config
   ~/.config/starship
+  ~/.config/ghostty
 )
 
 # Rename the old config files before we symlink the new ones
