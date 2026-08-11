@@ -1,63 +1,126 @@
+# Machine-agnostic shell config. Anything specific to one machine - secrets,
+# per-host PATH entries, work tooling - belongs in ~/.zshrc.local, which is
+# gitignored and sourced at the very bottom of this file.
+
+# Dedupe PATH automatically. `path` and `PATH` stay tied together, so appending
+# the same entry twice is a no-op instead of growing the variable forever.
+typeset -U path PATH
+
+# Homebrew prefix, without paying for `brew --prefix` on every shell start.
+if [ -x /opt/homebrew/bin/brew ]; then
+  HOMEBREW_PREFIX=/opt/homebrew          # Apple Silicon
+elif [ -x /usr/local/bin/brew ]; then
+  HOMEBREW_PREFIX=/usr/local             # Intel
+fi
+
+# ---------------------------------------------------------------------------
+# completions
+# ---------------------------------------------------------------------------
+
 # OPENSPEC:START
 # OpenSpec shell completions configuration (only if directory exists)
-if [ -d "$HOME/.zsh/completions" ]; then
-  fpath=("$HOME/.zsh/completions" $fpath)
-  autoload -Uz compinit
-  compinit
-fi
+[ -d "$HOME/.zsh/completions" ] && fpath=("$HOME/.zsh/completions" $fpath)
 # OPENSPEC:END
 
+[ -n "$HOMEBREW_PREFIX" ] && [ -d "$HOMEBREW_PREFIX/share/zsh/site-functions" ] &&
+  fpath=("$HOMEBREW_PREFIX/share/zsh/site-functions" $fpath)
+
+# Once, after every fpath entry is registered.
 autoload -Uz compinit && compinit
 
-# nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+# ---------------------------------------------------------------------------
+# node: nvm, with auto-switch on .nvmrc
+# ---------------------------------------------------------------------------
 
-# place this after nvm initialization!
-autoload -U add-zsh-hook
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 
-load-nvmrc() {
-  local nvmrc_path
-  nvmrc_path="$(nvm_find_nvmrc)"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  . "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 
-  if [ -n "$nvmrc_path" ]; then
-    local nvmrc_node_version
-    nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
+  # Must come after nvm is loaded - load-nvmrc calls nvm_find_nvmrc.
+  autoload -U add-zsh-hook
 
-    if [ "$nvmrc_node_version" = "N/A" ]; then
-      nvm install
-    elif [ "$nvmrc_node_version" != "$(nvm version)" ]; then
-      nvm use
+  load-nvmrc() {
+    local nvmrc_path
+    nvmrc_path="$(nvm_find_nvmrc)"
+
+    if [ -n "$nvmrc_path" ]; then
+      local nvmrc_node_version
+      nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
+
+      if [ "$nvmrc_node_version" = "N/A" ]; then
+        nvm install
+      elif [ "$nvmrc_node_version" != "$(nvm version)" ]; then
+        nvm use
+      fi
+    elif [ -n "$(PWD=$OLDPWD nvm_find_nvmrc)" ] && [ "$(nvm version)" != "$(nvm version default)" ]; then
+      echo "Reverting to nvm default version"
+      nvm use default
     fi
-  elif [ -n "$(PWD=$OLDPWD nvm_find_nvmrc)" ] && [ "$(nvm version)" != "$(nvm version default)" ]; then
-    echo "Reverting to nvm default version"
-    nvm use default
+  }
+
+  add-zsh-hook chpwd load-nvmrc
+  load-nvmrc
+fi
+
+# ---------------------------------------------------------------------------
+# node: pnpm
+# ---------------------------------------------------------------------------
+
+# pnpm's own default install location, per OS - never a hardcoded user path.
+if [ -z "${PNPM_HOME:-}" ]; then
+  case "$OSTYPE" in
+    darwin*) export PNPM_HOME="$HOME/Library/pnpm" ;;
+    *)       export PNPM_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/pnpm" ;;
+  esac
+fi
+[ -d "$PNPM_HOME" ] && path=("$PNPM_HOME" $path)
+
+# ---------------------------------------------------------------------------
+# node: bun
+# ---------------------------------------------------------------------------
+
+export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+if [ -d "$BUN_INSTALL" ]; then
+  path=("$BUN_INSTALL/bin" $path)
+  [ -s "$BUN_INSTALL/_bun" ] && . "$BUN_INSTALL/_bun"
+fi
+
+# ---------------------------------------------------------------------------
+# zsh plugins
+# ---------------------------------------------------------------------------
+
+if [ -n "$HOMEBREW_PREFIX" ]; then
+  _zsh_autosuggest="$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  if [ -s "$_zsh_autosuggest" ]; then
+    . "$_zsh_autosuggest"
+    bindkey '^f' autosuggest-accept   # ctrl-F takes the ghost text
   fi
-}
+  unset _zsh_autosuggest
 
-add-zsh-hook chpwd load-nvmrc
-load-nvmrc
+  # Syntax highlighting wraps the line editor, so it has to be sourced after
+  # anything else that binds keys or defines widgets.
+  _zsh_highlight="$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+  [ -s "$_zsh_highlight" ] && . "$_zsh_highlight"
+  unset _zsh_highlight
+fi
 
-# pnpm
-export PNPM_HOME="/Users/aessex/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
+# ---------------------------------------------------------------------------
+# prompt
+# ---------------------------------------------------------------------------
 
-# bun completions
-[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
-
-# bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
-# starship
-export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 export STARSHIP_CONFIG="$XDG_CONFIG_HOME/starship/starship.toml"
-eval "$(starship init zsh)"
+command -v starship >/dev/null && eval "$(starship init zsh)"
 
-# Load machine-specific configuration
-[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
+# ---------------------------------------------------------------------------
+# machine-specific config - keep this last so it can override anything above
+# ---------------------------------------------------------------------------
+
+# An `if` block rather than `[ -f ... ] &&` on purpose: the latter returns 1
+# when the file is absent, and that becomes $? at the first prompt, so starship
+# opens every new terminal showing its red error symbol.
+if [ -f "$HOME/.zshrc.local" ]; then
+  . "$HOME/.zshrc.local"
+fi

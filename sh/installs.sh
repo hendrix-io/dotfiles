@@ -80,3 +80,59 @@ install_ghostty() {
     success "ghostty installed"
   fi
 }
+
+# Everyday CLI tools. Keyed by command name so an already-present binary from
+# any source (brew, cargo, work-managed install) is left alone.
+cli_tools=(
+  "rg:ripgrep"    # fast search
+  "fd:fd"         # fast find
+  "fzf:fzf"       # fuzzy finder
+  "lazygit:lazygit"
+  "nvim:neovim"
+)
+
+install_cli_tools() {
+  for entry in "${cli_tools[@]}"; do
+    local cmd="${entry%%:*}"
+    local pkg="${entry#*:}"
+
+    if in_cmd "$cmd"; then
+      info "$pkg is already installed. Skipping."
+    else
+      info "Installing $pkg..."
+      install_pkg "$pkg"
+    fi
+  done
+}
+
+# zsh autosuggestions + syntax highlighting. .zshrc sources these from
+# $HOMEBREW_PREFIX/share and silently skips them if they aren't installed.
+zsh_plugins=(
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
+
+install_zsh_plugins() {
+  for pkg in "${zsh_plugins[@]}"; do
+    if in_brew "$pkg"; then
+      info "$pkg is already installed. Skipping."
+    else
+      info "Installing $pkg..."
+      install_pkg "$pkg"
+    fi
+  done
+}
+
+# Hack Nerd Font.
+#
+# Ghostty already embeds JetBrains Mono with Nerd Font symbol fallback, so the
+# starship git glyphs render without this. It only matters if you set an
+# explicit font-family - see stow/.config/ghostty/config.
+install_nerd_font() {
+  if brew list --cask font-hack-nerd-font &>/dev/null; then
+    info "font-hack-nerd-font is already installed. Skipping."
+  else
+    info "Installing font-hack-nerd-font..."
+    brew install --cask font-hack-nerd-font || warn "font-hack-nerd-font failed to install"
+  fi
+}

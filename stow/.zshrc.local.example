@@ -1,14 +1,22 @@
-# Machine-specific configuration
-# Copy this to ~/.zshrc.local and customize for your machine
-# DO NOT commit .zshrc.local - it's gitignored
+# Machine-specific configuration.
+#
+# setup.sh copies this to ~/.zshrc.local on first run. That file is gitignored
+# and never committed - it is the only correct home for secrets and for PATH
+# entries that exist on one machine but not another.
+#
+# ~/.zshrc sources this LAST, so anything here overrides the shared config.
 
-# PATH modifications (customize for your system)
-# export PATH=/usr/local/bin:/opt/homebrew/bin:$PATH
-
-# Secrets (NEVER commit these!)
+# --- Secrets -----------------------------------------------------------------
+# NEVER put these in stow/.zshrc - that file is committed.
 # export NEXUS_TOKEN=your_token_here
 
-# Machine-specific tool paths
+# --- Machine-specific tool paths ---------------------------------------------
+# PATH is deduped by `typeset -U path` in .zshrc, so repeating an entry here is
+# harmless, but each one only needs to appear once.
 # export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 # export PATH="$(npm config get prefix)/bin:$PATH"
 # export PATH="$HOME/.local/bin:$PATH"
+
+# --- Work vs personal --------------------------------------------------------
+# Anything provided by an employer (proxy URLs, internal registries, VPN
+# helpers) goes here rather than in the repo.

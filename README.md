@@ -4,60 +4,99 @@ My personal configuration files, managed with GNU Stow.
 
 ## What's included
 
-- **Starship prompt** - Minimal, fast shell prompt with git status
-- **Zsh config** - nvm with auto-switching, pnpm, bun, and more
+- **Zsh config** - nvm with `.nvmrc` auto-switching, pnpm, bun, autosuggestions, syntax highlighting
+- **Starship prompt** - minimal, fast, with git status
+- **Ghostty** - ayu theme, Hack Nerd Font
+- **Shared agent instructions** - one `AGENTS.md` read by Claude Code, Codex, and opencode
+- **CLI tools** - ripgrep, fd, fzf, lazygit, neovim
 
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/dotfiles.git ~/dotfiles
+git clone https://github.com/hendrix-io/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./setup.sh
 ```
 
-The setup script will:
-- Install Homebrew (if not already installed)
-- Install stow, starship, nvm, pnpm, and bun
-- Backup any existing config files (.pre-setup)
-- Symlink dotfiles to your home directory
-- Create a `.zshrc.local.example` file
+`setup.sh` installs Homebrew and the tools above, backs up any `~/.zshrc` it is
+about to replace to `~/.zshrc.pre-setup`, symlinks everything under `stow/` into
+your home directory, and links `AGENTS.md` to each agent's config location.
 
-## After installation
+Run it once. After that, use `./rebuild.sh`.
 
-1. Copy `~/.zshrc.local.example` to `~/.zshrc.local`
-2. Edit `~/.zshrc.local` with machine-specific config (PATH, secrets, etc.)
-3. Restart your terminal or run `source ~/.zshrc`
+## Daily use
+
+Edit files under `stow/` directly. They are symlinked, not copied, so a change
+to `stow/.zshrc` *is* a change to `~/.zshrc` - no rebuild needed.
+
+Run `./rebuild.sh` only when you:
+
+- add or remove a file under `stow/` (restow relays the links)
+- add a package to `sh/installs.sh`
+
+```bash
+./rebuild.sh
+```
+
+## Machine-specific config
+
+`~/.zshrc.local` is gitignored and sourced last by `.zshrc`, so it overrides
+anything in the shared config. Everything specific to one machine goes there:
+
+- secrets and tokens
+- PATH entries for tools installed on only that machine
+- employer-provided environment config
+
+`setup.sh` creates it from `stow/.zshrc.local.example` on first run.
+
+**Never put a credential in `stow/.zshrc`** - that file is committed.
+
+## Agent instructions
+
+`AGENTS.md` at the repo root is symlinked to all three of:
+
+- `~/.claude/CLAUDE.md`
+- `~/.codex/AGENTS.md`
+- `~/.config/opencode/AGENTS.md`
+
+Edit the one file, every agent picks it up. Project-level `AGENTS.md` files
+still override it.
+
+**`~/.claude/settings.json` is deliberately not managed here.** On a work
+machine that file mixes employer-provided config (API proxy base URL, model
+overrides, auth helper) with personal preferences like `statusLine` and
+`model`. Symlinking it from a dotfiles repo replaces the work half and breaks
+Claude Code. It stays machine-local.
 
 ## Structure
 
 ```
 dotfiles/
-├── sh/              # Installation and utility scripts
-│   ├── utils.sh     # Helper functions
-│   ├── installs.sh  # Package installation
-│   └── files.sh     # File management and stow
-├── stow/            # Dotfiles to be stowed
-│   ├── .zshrc
-│   ├── .zshrc.local.example
-│   └── .config/
-│       └── starship/
-│           └── starship.toml
-├── setup.sh         # Main setup script
-└── README.md
+├── AGENTS.md        # shared agent instructions, symlinked to 3 locations
+├── setup.sh         # first-run setup
+├── rebuild.sh       # re-apply after changes
+├── sh/
+│   ├── utils.sh     # helper functions
+│   ├── installs.sh  # package installation
+│   └── files.sh     # symlinking and backups
+└── stow/            # everything here is symlinked into ~
+    ├── .zshrc
+    ├── .zshrc.local.example
+    └── .config/
+        ├── ghostty/config
+        └── starship/starship.toml
 ```
 
 ## Manual management
 
-If you prefer to manage dotfiles manually:
-
 ```bash
-# Stow all dotfiles
 cd ~/dotfiles
-stow -d stow -t ~ .
 
-# Unstow (remove symlinks)
-stow -d stow -t ~ -D .
-
-# Restow (useful after updates)
-stow -d stow -t ~ -R .
+stow -d stow -t ~ .       # link
+stow -d stow -t ~ -D .    # unlink
+stow -d stow -t ~ -R .    # relink, picking up deletions
 ```
+
+Stow refuses to overwrite a real file and tells you which one conflicts. That
+is the intended safety net - move the file aside yourself rather than scripting
+around it.
