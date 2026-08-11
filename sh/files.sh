@@ -21,15 +21,63 @@ agent_links=(
   ~/.config/opencode/AGENTS.md
 )
 
-# Rename the old config files before we symlink the new ones
+# What rename_files moved, so restore_files can put it back exactly.
+renamed_from=()
+renamed_to=()
+
+# Rename the old config files before we symlink the new ones.
+#
+# Two things this must never do, both learned the hard way:
+#   - Back up a symlink. `test -f` follows symlinks, so on a second run it
+#     would move our own stow link on top of the real backup and destroy it.
+#     A symlink means the file is already stowed; there is nothing to save.
+#   - Overwrite an existing .pre-setup. If one is already there, timestamp the
+#     new one instead of silently replacing a backup you may still need.
 rename_files() {
+  renamed_from=()
+  renamed_to=()
+
   for f in "${files[@]}"; do
-    if file_exists "$f"; then
-      info "$f exists. Renaming to $f.pre-setup"
-      mv "$f" "$f.pre-setup"
-    else
-      info "$f doesn't exist. Skipping."
+    if [ -L "$f" ]; then
+      info "$f is already a symlink. Nothing to back up."
+      continue
     fi
+
+    if ! file_exists "$f"; then
+      info "$f doesn't exist. Skipping."
+      continue
+    fi
+
+    local backup="$f.pre-setup"
+    if [ -e "$backup" ]; then
+      backup="$f.pre-setup.$(date +%Y%m%d%H%M%S)"
+      warn "$f.pre-setup already exists, so backing up to $backup instead."
+    fi
+
+    info "$f exists. Renaming to $backup"
+    mv "$f" "$backup"
+    renamed_from+=("$f")
+    renamed_to+=("$backup")
+  done
+}
+
+# Put back what rename_files moved aside.
+#
+# rename_files has to run before stow (stow refuses to link over a real file),
+# which means a stow failure would otherwise leave you with no ~/.zshrc at all -
+# no nvm, no prompt, no PATH, in every new terminal.
+restore_files() {
+  local i=0
+  while [ "$i" -lt "${#renamed_from[@]}" ]; do
+    local orig="${renamed_from[$i]}"
+    local backup="${renamed_to[$i]}"
+
+    if [ -e "$backup" ] && [ ! -e "$orig" ]; then
+      info "Restoring $orig from $backup"
+      mv "$backup" "$orig"
+    fi
+
+    i=$((i + 1))
   done
 }
 
@@ -69,6 +117,41 @@ link_agents() {
     ln -sfn "$src" "$dest"
     info "Linked $dest"
   done
+}
+
+# Lines in a backed-up .zshrc that look machine-specific: credentials and PATH
+# entries. Deliberately NOT migrated automatically - the malformed and duplicate
+# entries that accumulate in a hand-edited .zshrc should not be carried forward
+# blindly, and a credential should move by your hand, not a script's.
+MIGRATE_PATTERN='TOKEN|SECRET|API_KEY|PASSWORD|_KEY=|export PATH='
+
+# Tell the user what was left behind, with commands they can paste.
+# Prints the matching line COUNT, never the matching lines - the whole point is
+# to avoid dumping a token into terminal scrollback.
+report_migration() {
+  local backup="$HOME/.zshrc.pre-setup"
+  file_exists "$backup" || return 0
+
+  local n
+  n=$(grep -cE "$MIGRATE_PATTERN" "$backup" 2>/dev/null || true)
+  [ "${n:-0}" -gt 0 ] || return 0
+
+  echo ""
+  warn "$n line(s) in ~/.zshrc.pre-setup look machine-specific and were not carried over."
+  echo ""
+  echo "  1. See what they are:"
+  echo ""
+  echo "       grep -nE '$MIGRATE_PATTERN' ~/.zshrc.pre-setup"
+  echo ""
+  echo "  2. Append them to your gitignored local config:"
+  echo ""
+  echo "       grep -E '$MIGRATE_PATTERN' ~/.zshrc.pre-setup >> ~/.zshrc.local"
+  echo ""
+  echo "  3. Open it and drop anything stale - duplicated PATH entries, paths"
+  echo "     for tools you no longer have:"
+  echo ""
+  echo "       \${EDITOR:-vi} ~/.zshrc.local && source ~/.zshrc"
+  echo ""
 }
 
 # Create .zshrc.local if it doesn't exist

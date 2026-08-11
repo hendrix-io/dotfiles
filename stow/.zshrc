@@ -88,6 +88,23 @@ if [ -d "$BUN_INSTALL" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# user-local binaries
+# ---------------------------------------------------------------------------
+
+# no-mistakes symlinks itself here, but only when this is already on PATH -
+# otherwise its installer sudo-links into /usr/local/bin instead.
+[ -d "$HOME/.local/bin" ] && path=("$HOME/.local/bin" $path)
+
+# ---------------------------------------------------------------------------
+# aliases
+# ---------------------------------------------------------------------------
+
+# Run the no-mistakes gate locally only: rebase, review, test, document, lint.
+# Skipping push means nothing leaves this machine - no branch pushed, no MR
+# opened. Drop the --skip when you're ready for it to own the branch.
+alias gate='no-mistakes --skip push,pr,ci'
+
+# ---------------------------------------------------------------------------
 # zsh plugins
 # ---------------------------------------------------------------------------
 

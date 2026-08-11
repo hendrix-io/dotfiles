@@ -15,7 +15,8 @@
 # harmless, but each one only needs to appear once.
 # export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 # export PATH="$(npm config get prefix)/bin:$PATH"
-# export PATH="$HOME/.local/bin:$PATH"
+#
+# Note: $HOME/.local/bin is already added by .zshrc - no need to repeat it here.
 
 # --- Work vs personal --------------------------------------------------------
 # Anything provided by an employer (proxy URLs, internal registries, VPN

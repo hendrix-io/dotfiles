@@ -41,10 +41,11 @@ success "Agent instructions linked"
 info "Checking packages..."
 install_stow
 install_starship
-install_ghostty
 install_cli_tools
 install_zsh_plugins
-install_nerd_font
+install_casks
+install_no_mistakes
+install_lavish_skill
 success "Packages up to date"
 
 success "Complete! Run: source ~/.zshrc"

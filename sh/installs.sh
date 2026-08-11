@@ -70,15 +70,28 @@ install_bun() {
   fi
 }
 
-# Install ghostty terminal
-install_ghostty() {
-  if in_cmd "ghostty"; then
-    info "ghostty is already installed. Skipping."
-  else
-    info "Installing ghostty..."
-    brew install --cask ghostty
-    success "ghostty installed"
-  fi
+# GUI apps and fonts.
+#
+# font-hack-nerd-font: Ghostty already embeds JetBrains Mono with Nerd Font
+#   fallback, so this only matters because stow/.config/ghostty/config sets an
+#   explicit font-family.
+# opensuperwhisper: local Whisper/Parakeet dictation. arm64 + macOS >= 14 only,
+#   so brew declines it on Intel - the warn below keeps that from failing setup.
+casks=(
+  ghostty
+  font-hack-nerd-font
+  opensuperwhisper
+)
+
+install_casks() {
+  for c in "${casks[@]}"; do
+    if brew list --cask "$c" &>/dev/null; then
+      info "$c is already installed. Skipping."
+    else
+      info "Installing $c..."
+      brew install --cask "$c" || warn "$c failed to install"
+    fi
+  done
 }
 
 # Everyday CLI tools. Keyed by command name so an already-present binary from
@@ -89,6 +102,7 @@ cli_tools=(
   "fzf:fzf"       # fuzzy finder
   "lazygit:lazygit"
   "nvim:neovim"
+  "treehouse:treehouse"   # pool of reusable git worktrees, warm deps intact
 )
 
 install_cli_tools() {
@@ -123,16 +137,54 @@ install_zsh_plugins() {
   done
 }
 
-# Hack Nerd Font.
+# no-mistakes: local validation gate in front of the real remote.
 #
-# Ghostty already embeds JetBrains Mono with Nerd Font symbol fallback, so the
-# starship git glyphs render without this. It only matters if you set an
-# explicit font-family - see stow/.config/ghostty/config.
-install_nerd_font() {
-  if brew list --cask font-hack-nerd-font &>/dev/null; then
-    info "font-hack-nerd-font is already installed. Skipping."
-  else
-    info "Installing font-hack-nerd-font..."
-    brew install --cask font-hack-nerd-font || warn "font-hack-nerd-font failed to install"
+# Not in Homebrew, so this runs the upstream install script. The in_cmd guard
+# above keeps it from re-downloading on every rebuild.
+#
+# The script puts its binary in ~/.no-mistakes/bin, then symlinks it into
+# ~/.local/bin when that directory is already on PATH - and falls back to a
+# sudo-owned link in /usr/local/bin when it isn't. Creating the directory and
+# putting it on PATH for the duration of the install keeps it sudo-free and out
+# of system directories. .zshrc adds the same entry permanently.
+#
+# Telemetry note: unlike a source build, this binary ships with an embedded
+# telemetry website ID. Set NO_MISTAKES_UMAMI_WEBSITE_ID="" or check upstream's
+# opt-out if you'd rather it stayed off.
+# lavish: opens agent-generated HTML in a local browser so you can click
+# elements, annotate text, and edit Mermaid diagrams as whiteboards, then send
+# that back to the agent instead of describing changes in prose.
+#
+# The CLI itself is deliberately install-free - `npx -y lavish-axi` fetches it
+# on demand. Only the skill gets installed, and at user level (-g) so it follows
+# you across repos rather than landing in one project's .claude/skills.
+install_lavish_skill() {
+  if [ -d "$HOME/.claude/skills/lavish" ]; then
+    info "lavish skill is already installed. Skipping."
+    return 0
   fi
+
+  if ! in_cmd "npx"; then
+    warn "npx not found - skipping lavish skill."
+    return 0
+  fi
+
+  info "Installing lavish skill..."
+  npx -y skills add kunchenguid/lavish-axi --skill lavish -g ||
+    warn "lavish skill failed to install"
 }
+
+install_no_mistakes() {
+  if in_cmd "no-mistakes"; then
+    info "no-mistakes is already installed. Skipping."
+    return 0
+  fi
+
+  info "Installing no-mistakes..."
+  mkdir -p "$HOME/.local/bin"
+  (
+    export PATH="$HOME/.local/bin:$PATH"
+    curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh
+  ) || warn "no-mistakes failed to install"
+}
+

@@ -27,10 +27,10 @@ success "Packages updated"
 
 install_stow
 install_starship
-install_ghostty
 install_cli_tools
 install_zsh_plugins
-install_nerd_font
+install_casks
+install_no_mistakes
 success "Core tools installed"
 
 install_nvm
@@ -38,22 +38,32 @@ install_pnpm
 install_bun
 success "Node.js tools installed"
 
+# Needs npx, so it has to come after the Node tools above.
+install_lavish_skill
+
 # Order matters: .zshrc.local has to exist before the new .zshrc sources it,
 # and rename_files has to run before stow so stow isn't blocked by the old one.
 setup_zshrc_local
 rename_files
-sym_stow
+if ! sym_stow; then
+  restore_files
+  err "Aborted. Your original ~/.zshrc has been put back."
+  err "Resolve the conflict above, then re-run ./setup.sh."
+  err "To keep the existing file and pull it into the repo instead:"
+  err "  stow -d \"$DIR/stow\" -t ~ --adopt ."
+  exit 1
+fi
 link_agents
 info "Symlinking dotfiles complete"
 
 clean_up
 
 success "Complete!"
-echo ""
-info "Next steps:"
-echo "  1. Move any secrets and machine-specific PATH entries out of"
-echo "     ~/.zshrc.pre-setup and into ~/.zshrc.local"
-echo "  2. Edit AGENTS.md - it is now the single source for every agent"
-echo "  3. Restart your terminal or run: source ~/.zshrc"
+
+report_migration
+
+info "Also worth doing:"
+echo "  - Edit AGENTS.md - it is now the single source for every agent"
+echo "  - Restart your terminal or run: source ~/.zshrc"
 echo ""
 info "From now on, use ./rebuild.sh instead of ./setup.sh"
