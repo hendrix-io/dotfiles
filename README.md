@@ -4,11 +4,23 @@ My personal configuration files, managed with GNU Stow.
 
 ## What's included
 
-- **Zsh config** - nvm with `.nvmrc` auto-switching, pnpm, bun, autosuggestions, syntax highlighting
+**Shell and terminal**
+
+- **Zsh** - nvm with `.nvmrc` auto-switching, pnpm, bun, autosuggestions, syntax highlighting, self-deduplicating PATH
 - **Starship prompt** - minimal, fast, with git status
 - **Ghostty** - ayu theme, Hack Nerd Font
-- **Shared agent instructions** - one `AGENTS.md` read by Claude Code, Codex, and opencode
-- **CLI tools** - ripgrep, fd, fzf, lazygit, neovim
+- **CLI tools** - ripgrep, fd, fzf, lazygit, neovim, tmux, gh, glab
+
+**Agent tooling**
+
+- **Shared `AGENTS.md`** - one file read by Claude Code, Codex, and opencode
+- **[no-mistakes](https://github.com/kunchenguid/no-mistakes)** - local validation gate, aliased to `gate`
+- **[treehouse](https://github.com/kunchenguid/treehouse)** - pool of reusable git worktrees with warm dependencies
+- **[lavish](https://github.com/kunchenguid/lavish-axi)** - review agent-generated HTML in a browser; skill installed at user level
+
+**Apps**
+
+- **[OpenSuperWhisper](https://github.com/Starmel/OpenSuperWhisper)** - local dictation (arm64, macOS 14+)
 
 ## Installation
 
@@ -18,11 +30,34 @@ cd ~/dotfiles
 ./setup.sh
 ```
 
-`setup.sh` installs Homebrew and the tools above, backs up any `~/.zshrc` it is
+`setup.sh` installs Homebrew and everything above, backs up any `~/.zshrc` it is
 about to replace to `~/.zshrc.pre-setup`, symlinks everything under `stow/` into
 your home directory, and links `AGENTS.md` to each agent's config location.
 
 Run it once. After that, use `./rebuild.sh`.
+
+### If it reports a stow conflict
+
+Stow refuses to overwrite a real file, names the one that conflicts, and changes
+nothing. `setup.sh` then restores any `.zshrc` it had already moved aside and
+exits, so you are never left without a shell config.
+
+Two ways forward. Discard the existing file, keeping this repo's version:
+
+```bash
+mv ~/.config/some/file{,.pre-setup} && ./setup.sh
+```
+
+Or keep the existing file and pull it *into* the repo, replacing this repo's
+copy with yours:
+
+```bash
+stow -d stow -t ~ --adopt .
+git diff          # see exactly what got adopted
+```
+
+`--adopt` is the right choice when the live file is newer than the committed
+one. Always `git diff` afterwards - it overwrites the repo copy silently.
 
 ## Daily use
 
@@ -47,7 +82,10 @@ anything in the shared config. Everything specific to one machine goes there:
 - PATH entries for tools installed on only that machine
 - employer-provided environment config
 
-`setup.sh` creates it from `stow/.zshrc.local.example` on first run.
+`setup.sh` creates it from `stow/.zshrc.local.example` on first run, then prints
+the exact commands to migrate anything machine-specific out of the backed-up
+`~/.zshrc.pre-setup`. It reports how many such lines it found but never prints
+them, so a credential does not end up in terminal scrollback.
 
 **Never put a credential in `stow/.zshrc`** - that file is committed.
 
@@ -65,8 +103,44 @@ still override it.
 **`~/.claude/settings.json` is deliberately not managed here.** On a work
 machine that file mixes employer-provided config (API proxy base URL, model
 overrides, auth helper) with personal preferences like `statusLine` and
-`model`. Symlinking it from a dotfiles repo replaces the work half and breaks
-Claude Code. It stays machine-local.
+`model`. Claude Code reads a single user-level settings file with no second file
+merged into it, so symlinking it from a dotfiles repo replaces the work half and
+breaks Claude Code. It stays machine-local.
+
+Skills split the same way. Skills that follow *you* across projects belong in
+`~/.claude/skills/` - that is where `setup.sh` installs the lavish skill, with
+`npx skills add ... -g`. Skills that encode one project's conventions belong in
+that project's `.claude/skills/`.
+
+## The gate
+
+`no-mistakes` puts a validation pipeline in front of your remote. The `gate`
+alias runs it in local-only mode:
+
+```bash
+gate     # no-mistakes --skip push,pr,ci
+```
+
+That runs `intent → rebase → review → test → document → lint` and stops there.
+Nothing is pushed, no PR or MR is opened. Drop the `--skip` when you want it to
+own the branch end to end.
+
+Per-repo configuration lives in that repo's `.no-mistakes.yaml`, not here:
+
+```yaml
+commands:
+  test: npm run test -w some-package
+  lint: npm run lint
+  format: npm run format
+```
+
+`commands.*` are read from the repo's **default branch**, never the pushed
+commit - a supply-chain guard. The config has to land on `main`/`development`
+before it affects a feature branch.
+
+GitLab is supported via `glab` instead of `gh`, including self-hosted
+instances. Install it with `brew install glab` if you enable the MR and CI
+steps.
 
 ## Structure
 
@@ -76,9 +150,9 @@ dotfiles/
 ├── setup.sh         # first-run setup
 ├── rebuild.sh       # re-apply after changes
 ├── sh/
-│   ├── utils.sh     # helper functions
-│   ├── installs.sh  # package installation
-│   └── files.sh     # symlinking and backups
+│   ├── utils.sh     # helper functions and colored output
+│   ├── installs.sh  # package, cask, and tool installation
+│   └── files.sh     # symlinking, backups, and rollback
 └── stow/            # everything here is symlinked into ~
     ├── .zshrc
     ├── .zshrc.local.example
@@ -92,11 +166,8 @@ dotfiles/
 ```bash
 cd ~/dotfiles
 
-stow -d stow -t ~ .       # link
-stow -d stow -t ~ -D .    # unlink
-stow -d stow -t ~ -R .    # relink, picking up deletions
+stow -d stow -t ~ .          # link
+stow -d stow -t ~ -D .       # unlink
+stow -d stow -t ~ -R .       # relink, picking up deletions
+stow -d stow -t ~ --adopt .  # pull existing files INTO the repo, then link
 ```
-
-Stow refuses to overwrite a real file and tells you which one conflicts. That
-is the intended safety net - move the file aside yourself rather than scripting
-around it.

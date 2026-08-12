@@ -13,6 +13,20 @@ elif [ -x /usr/local/bin/brew ]; then
   HOMEBREW_PREFIX=/usr/local             # Intel
 fi
 
+# Put Homebrew on PATH. This is NOT optional and NOT redundant with the system
+# default: macOS `path_helper` only reads /etc/paths and /etc/paths.d, neither of
+# which Homebrew writes to. Without this (or a .zprofile running `brew
+# shellenv`) a fresh login shell has no brew, no starship, no stow, no ripgrep -
+# and because the blocks below are all guarded on the binary existing, they fail
+# silently and you just get the stock `%n@%m %1~ %#` prompt with no error.
+#
+# Doing it here rather than in .zprofile also covers non-login interactive
+# shells, which read only this file.
+if [ -n "$HOMEBREW_PREFIX" ]; then
+  export HOMEBREW_PREFIX
+  path=("$HOMEBREW_PREFIX/bin" "$HOMEBREW_PREFIX/sbin" $path)
+fi
+
 # ---------------------------------------------------------------------------
 # completions
 # ---------------------------------------------------------------------------
@@ -94,15 +108,6 @@ fi
 # no-mistakes symlinks itself here, but only when this is already on PATH -
 # otherwise its installer sudo-links into /usr/local/bin instead.
 [ -d "$HOME/.local/bin" ] && path=("$HOME/.local/bin" $path)
-
-# ---------------------------------------------------------------------------
-# aliases
-# ---------------------------------------------------------------------------
-
-# Run the no-mistakes gate locally only: rebase, review, test, document, lint.
-# Skipping push means nothing leaves this machine - no branch pushed, no MR
-# opened. Drop the --skip when you're ready for it to own the branch.
-alias gate='no-mistakes --skip push,pr,ci'
 
 # ---------------------------------------------------------------------------
 # zsh plugins

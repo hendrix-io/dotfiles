@@ -97,12 +97,19 @@ install_casks() {
 # Everyday CLI tools. Keyed by command name so an already-present binary from
 # any source (brew, cargo, work-managed install) is left alone.
 cli_tools=(
+  # Declared deliberately: macOS ships an older git via Xcode Command Line
+  # Tools, and .zshrc puts $HOMEBREW_PREFIX/bin ahead of /usr/bin, so this is
+  # the one that actually runs.
+  "git:git"
   "rg:ripgrep"    # fast search
   "fd:fd"         # fast find
   "fzf:fzf"       # fuzzy finder
   "lazygit:lazygit"
   "nvim:neovim"
   "treehouse:treehouse"   # pool of reusable git worktrees, warm deps intact
+  "tmux:tmux"
+  "gh:gh"
+  "glab:glab"
 )
 
 install_cli_tools() {
