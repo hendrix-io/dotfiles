@@ -10,4 +10,5 @@ o.clipboard = 'unnamedplus'    -- share the system clipboard
 o.scrolloff = 16               -- keep cursor away from the screen edge
 o.undofile = true              -- persistent undo across sessions
 o.mouse = ''                   -- no mouse in nvim; also lets Herdr keep host mouse capture off so Escape isn't swallowed
+o.showmode = false             -- lualine already shows the mode
 
