@@ -1,2 +1,6 @@
 # Never commit machine-specific config or secrets
 .zshrc.local
+.gitconfig.local
+
+# Nix build output
+result
