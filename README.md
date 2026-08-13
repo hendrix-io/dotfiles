@@ -1,77 +1,74 @@
 # dotfiles
 
-My personal configuration files, managed with GNU Stow.
+My personal Mac setup, managed with nix-darwin and home-manager.
+One repo, one command, and a fresh Mac ends up configured the same way every time.
+
+The declarative skeleton is adapted from
+[kunchenguid/dotfiles](https://github.com/kunchenguid/dotfiles) (MIT-0) -
+see [Credits](#credits).
 
 ## What's included
 
-**Shell and terminal**
+**Declarative (Nix owns it, `rebuild.sh` re-applies it)**
 
-- **Zsh** - nvm with `.nvmrc` auto-switching, pnpm, bun, autosuggestions, syntax highlighting, self-deduplicating PATH
-- **Starship prompt** - minimal, fast, with git status
-- **Ghostty** - ayu theme, Hack Nerd Font
-- **CLI tools** - ripgrep, fd, fzf, lazygit, neovim, tmux, gh, glab
+- **macOS settings** - dark mode, fast key repeat, dock autohide, Finder list view, tap to click
+- **CLI tools** - git, gh, glab, ripgrep, fd, fzf, jq, lazygit, neovim, tmux, starship, [treehouse](https://github.com/kunchenguid/treehouse) (via its own flake input)
+- **Homebrew** - ghostty, Hack Nerd Font, [OpenSuperWhisper](https://github.com/Starmel/OpenSuperWhisper), [herdr](https://herdr.dev), the zsh plugins `.zshrc` sources from brew's share dir
+- **Linked configs** - zsh, starship, ghostty, herdr, `~/.claude/settings.json`, and one `AGENTS.md` for every agent
 
-**Agent tooling**
+**Imperative (guarded installers, same scripts re-run safely)**
 
-- **Shared `AGENTS.md`** - one file read by Claude Code, Codex, and opencode
+- **Node toolchain** - nvm with `.nvmrc` auto-switching, node LTS, pnpm, bun
+- **[gnhf](https://github.com/kunchenguid/gnhf)** - overnight agent loop orchestrator, npm global, kept alive across node upgrades via nvm's `default-packages`
 - **[no-mistakes](https://github.com/kunchenguid/no-mistakes)** - local validation gate, aliased to `gate`
-- **[treehouse](https://github.com/kunchenguid/treehouse)** - pool of reusable git worktrees with warm dependencies
 - **[lavish](https://github.com/kunchenguid/lavish-axi)** - review agent-generated HTML in a browser; skill installed at user level
+- **[firstmate](https://github.com/kunchenguid/firstmate)** - agent distro; the clone is the install, at `~/code/firstmate`
 
-**Apps**
+## Fresh-machine setup
 
-- **[OpenSuperWhisper](https://github.com/Starmel/OpenSuperWhisper)** - local dictation (arm64, macOS 14+)
-
-## Installation
-
-```bash
+```sh
 git clone https://github.com/hendrix-io/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-./setup.sh
+./bootstrap.sh
 ```
 
-`setup.sh` installs Homebrew and everything above, backs up any `~/.zshrc` it is
-about to replace to `~/.zshrc.pre-setup`, symlinks everything under `stow/` into
-your home directory, and links `AGENTS.md` to each agent's config location.
+`bootstrap.sh` does five things, in order:
 
-Run it once. After that, use `./rebuild.sh`.
+1. Installs Determinate Nix, if it isn't already installed.
+2. Symlinks this repo to `~/.dotfiles` (home.nix resolves its file links through that path).
+3. Checks the `user` in `flake.nix` against your macOS username and offers to fix a mismatch.
+4. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
+5. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain and agent tools, clones firstmate.
 
-### If it reports a stow conflict
+Auth is the only part that needs you at the keyboard. Everything else is unattended.
 
-Stow refuses to overwrite a real file, names the one that conflicts, and changes
-nothing. `setup.sh` then restores any `.zshrc` it had already moved aside and
-exits, so you are never left without a shell config.
+### Validate without applying
 
-Two ways forward. Discard the existing file, keeping this repo's version:
+Once Nix is installed, check that the config builds without touching the system:
 
-```bash
-mv ~/.config/some/file{,.pre-setup} && ./setup.sh
+```sh
+nix flake check --no-build
+nix build .#darwinConfigurations.mac.system --dry-run
 ```
-
-Or keep the existing file and pull it *into* the repo, replacing this repo's
-copy with yours:
-
-```bash
-stow -d stow -t ~ --adopt .
-git diff          # see exactly what got adopted
-```
-
-`--adopt` is the right choice when the live file is newer than the committed
-one. Always `git diff` afterwards - it overwrites the repo copy silently.
 
 ## Daily use
 
-Edit files under `stow/` directly. They are symlinked, not copied, so a change
-to `stow/.zshrc` *is* a change to `~/.zshrc` - no rebuild needed.
+Edit files under `home/` directly. They are symlinked, not copied, so a change
+to `home/.zshrc` *is* a change to `~/.zshrc` - no rebuild needed.
 
-Run `./rebuild.sh` only when you:
+Run `./rebuild.sh` when you:
 
-- add or remove a file under `stow/` (restow relays the links)
-- add a package to `sh/installs.sh`
+- add or remove a package in `home.nix` or `configuration.nix`
+- change a macOS default
+- add or remove a linked file
+- want the guarded installers re-checked
 
-```bash
+```sh
 ./rebuild.sh
 ```
+
+`rebuild.sh` never prompts. If auth is missing it warns and tells you the
+command to run, so a routine rebuild can't block on input.
 
 ## Machine-specific config
 
@@ -80,18 +77,19 @@ anything in the shared config. Everything specific to one machine goes there:
 
 - secrets and tokens
 - PATH entries for tools installed on only that machine
-- employer-provided environment config
 
-`setup.sh` creates it from `stow/.zshrc.local.example` on first run, then prints
-the exact commands to migrate anything machine-specific out of the backed-up
-`~/.zshrc.pre-setup`. It reports how many such lines it found but never prints
-them, so a credential does not end up in terminal scrollback.
+`bootstrap.sh` creates it from `home/.zshrc.local.example` on first run.
 
-**Never put a credential in `stow/.zshrc`** - that file is committed.
+Git identity works the same way: the committed `home/.gitconfig` holds only
+behavior, and `~/.gitconfig.local` (created from its example, never
+committed) holds your name and emails - including per-directory `includeIf`
+overrides for different jobs, so none of that is visible in this public repo.
+
+**Never put a credential in `home/.zshrc`** - that file is committed.
 
 ## Agent instructions
 
-`AGENTS.md` at the repo root is symlinked to all three of:
+`AGENTS.md` at the repo root is linked by home-manager to all three of:
 
 - `~/.claude/CLAUDE.md`
 - `~/.codex/AGENTS.md`
@@ -100,74 +98,70 @@ them, so a credential does not end up in terminal scrollback.
 Edit the one file, every agent picks it up. Project-level `AGENTS.md` files
 still override it.
 
-**`~/.claude/settings.json` is deliberately not managed here.** On a work
-machine that file mixes employer-provided config (API proxy base URL, model
-overrides, auth helper) with personal preferences like `statusLine` and
-`model`. Claude Code reads a single user-level settings file with no second file
-merged into it, so symlinking it from a dotfiles repo replaces the work half and
-breaks Claude Code. It stays machine-local.
+`~/.claude/settings.json` IS managed here. This is a personal machine, so the
+file holds nothing but personal preferences; on a work machine that mixes in
+employer-provided config (API proxy, auth helper), leave it machine-local
+instead - Claude Code reads a single user-level settings file, and replacing
+the work half breaks it.
 
-Skills split the same way. Skills that follow *you* across projects belong in
-`~/.claude/skills/` - that is where `setup.sh` installs the lavish skill, with
-`npx skills add ... -g`. Skills that encode one project's conventions belong in
-that project's `.claude/skills/`.
+## Agent fleet
 
-## The gate
+The pieces fit together like this:
 
-`no-mistakes` puts a validation pipeline in front of your remote. The `gate`
-alias runs it in local-only mode:
+- **firstmate** is the captain: launch a harness inside `~/code/firstmate`
+  (`claude` is a co-primary) and it dispatches crew agents into treehouse
+  worktrees, in tmux by default or herdr as an experimental backend.
+- **treehouse** keeps a pool of reusable worktrees with dependencies and
+  build caches intact.
+- **gnhf** is the overnight loop: `gnhf "objective"` commits one small change
+  per iteration until a cap, and you wake up to a reviewable branch.
+- **no-mistakes** (`gate`) validates locally before anything reaches a remote.
+- **herdr** runs as a service: `brew services start herdr` once, then it's the
+  agent multiplexer in your terminal. Its config here is seeded for a
+  tmux-style prefix; expect to tune keybindings under Ghostty.
 
-```bash
-gate     # no-mistakes --skip push,pr,ci
-```
+## Homebrew cleanup
 
-That runs `intent → rebase → review → test → document → lint` and stops there.
-Nothing is pushed, no PR or MR is opened. Drop the `--skip` when you want it to
-own the branch end to end.
-
-Per-repo configuration lives in that repo's `.no-mistakes.yaml`, not here:
-
-```yaml
-commands:
-  test: npm run test -w some-package
-  lint: npm run lint
-  format: npm run format
-```
-
-`commands.*` are read from the repo's **default branch**, never the pushed
-commit - a supply-chain guard. The config has to land on `main`/`development`
-before it affects a feature branch.
-
-GitLab is supported via `glab` instead of `gh`, including self-hosted
-instances. Install it with `brew install glab` if you enable the MR and CI
-steps.
+`configuration.nix` sets `homebrew.onActivation.cleanup = "uninstall"`: any
+brew package not in its `brews`/`casks` lists is uninstalled on switch. The
+first switch will remove brew's git, gh, starship, and stow - Nix provides
+git, gh, and starship from then on, and stow isn't needed anymore. It is
+deliberately not `"zap"`, which would also purge removed casks' app data.
 
 ## Structure
 
 ```
 dotfiles/
-├── AGENTS.md        # shared agent instructions, symlinked to 3 locations
-├── setup.sh         # first-run setup
-├── rebuild.sh       # re-apply after changes
+├── flake.nix          # entry point: nixpkgs, nix-darwin, home-manager, treehouse
+├── configuration.nix  # system layer: macOS defaults, Homebrew lists
+├── home.nix           # user layer: packages, symlinks into home/
+├── AGENTS.md          # shared agent instructions, linked to 3 locations
+├── bootstrap.sh       # first run: nix install, first switch, auth, clones
+├── rebuild.sh         # every later change; never prompts
 ├── sh/
-│   ├── utils.sh     # helper functions and colored output
-│   ├── installs.sh  # package, cask, and tool installation
-│   └── files.sh     # symlinking, backups, and rollback
-└── stow/            # everything here is symlinked into ~
+│   ├── utils.sh       # helpers and colored output
+│   └── installs.sh    # the imperative layer: guarded installers, auth, firstmate
+└── home/              # the real config files, symlinked into ~
     ├── .zshrc
     ├── .zshrc.local.example
+    ├── .claude/settings.json
     └── .config/
         ├── ghostty/config
+        ├── herdr/config.toml
         └── starship/starship.toml
 ```
 
-## Manual management
+## Credits
 
-```bash
-cd ~/dotfiles
-
-stow -d stow -t ~ .          # link
-stow -d stow -t ~ -D .       # unlink
-stow -d stow -t ~ -R .       # relink, picking up deletions
-stow -d stow -t ~ --adopt .  # pull existing files INTO the repo, then link
-```
+The nix-darwin + home-manager structure here - `flake.nix` /
+`configuration.nix` / `home.nix`, the bootstrap-then-rebuild flow, and the
+`mkOutOfStoreSymlink` edit-in-place model - is adapted from
+[Kun Chen's dotfiles](https://github.com/kunchenguid/dotfiles) (MIT No
+Attribution), and the herdr config started as a copy of his. Most of the
+agent tooling this repo installs ([treehouse](https://github.com/kunchenguid/treehouse),
+[firstmate](https://github.com/kunchenguid/firstmate),
+[gnhf](https://github.com/kunchenguid/gnhf),
+[no-mistakes](https://github.com/kunchenguid/no-mistakes),
+[lavish](https://github.com/kunchenguid/lavish-axi)) is his work too.
+His [walkthrough video](https://youtu.be/5N-okeDdIuI) covers the original
+setup this one grew from.

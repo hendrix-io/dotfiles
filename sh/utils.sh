@@ -32,32 +32,3 @@ warn() {
 in_cmd() {
   hash "$@" &> /dev/null
 }
-
-# Does it exist in brew?
-in_brew() {
-  brew list | grep "$@" &> /dev/null
-}
-
-file_exists() {
-  test -f "$@"
-}
-
-folder_exists() {
-  test -d "$@"
-}
-
-install_pkg() {
-  brew install "$@" || echo "$@ failed to install"
-}
-
-# Update current packages
-update_pkgs() {
-  brew update
-  brew upgrade
-}
-
-# Cleanup after ourselves
-clean_up() {
-  info "Cleaning up..."
-  brew cleanup
-}

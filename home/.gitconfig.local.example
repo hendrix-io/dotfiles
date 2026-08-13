@@ -1,0 +1,15 @@
+# Machine-local git identity. Copied to ~/.gitconfig.local by bootstrap;
+# fill it in there. That file is never committed, so identities stay private.
+
+[user]
+	name = Your Name
+	# A GitHub noreply address (Settings > Emails) keeps your real address
+	# out of public commit history.
+	email = you@example.com
+
+# Per-directory identity for other jobs or clients - repos under the matched
+# path get that email, everything else uses [user] above. The override file
+# also stays machine-local, so none of this is visible publicly.
+#
+# [includeIf "gitdir:~/code/some-employer/"]
+#	path = ~/.gitconfig-some-employer

@@ -1,0 +1,12 @@
+# Machine-agnostic git behavior. Identity (name, emails, per-job overrides)
+# lives in ~/.gitconfig.local, which is never committed - see the example.
+
+[push]
+	autoSetupRemote = true
+
+[init]
+	defaultBranch = main
+
+# Last, so it can override anything above.
+[include]
+	path = ~/.gitconfig.local
