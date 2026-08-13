@@ -38,6 +38,8 @@ in
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.gitconfig";
   home.file.".config/starship".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/starship";
+  home.file.".config/nvim".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/nvim";
   home.file.".config/ghostty".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/ghostty";
   home.file.".config/herdr".source =

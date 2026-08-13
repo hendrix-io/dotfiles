@@ -148,6 +148,7 @@ dotfiles/
     └── .config/
         ├── ghostty/config
         ├── herdr/config.toml
+        ├── nvim/              # lazy.nvim, ayu-dark, oil + snacks + neogit
         └── starship/starship.toml
 ```
 
