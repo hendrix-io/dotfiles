@@ -10,7 +10,6 @@
   skipped, say which and why.
 - Never commit unless explicitly asked. Finish the work, stage it if that
   helps, and report what changed - the decision to commit is mine.
-- Never add yourself as a commit co-author.
 - Never use `--no-verify`. If a hook fails, fix the cause.
 - Never force-push to a shared branch.
 - Never hand-edit `CHANGELOG.md` or any file marked auto-generated. Change the
