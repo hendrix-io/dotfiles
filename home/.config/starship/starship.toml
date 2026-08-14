@@ -16,6 +16,3 @@ error_symbol = '[✗](bold red) '
 
 [git_metrics]
 disabled=false
-
-[git_branch]
-symbol=' '

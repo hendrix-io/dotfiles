@@ -11,6 +11,17 @@
 
 FIRSTMATE_DIR="${FIRSTMATE_DIR:-$HOME/code/firstmate}"
 
+# `sudo darwin-rebuild` evaluates the flake as root; on a dirty tree git can
+# leave root-owned entries in .git, which breaks every later `git add`. Hand
+# them back while the switch's sudo credentials are still warm.
+repair_git_ownership() {
+  if [ -n "$(find "$DOTFILES_DIR/.git" -user 0 -print -quit 2>/dev/null)" ]; then
+    info "Fixing root-owned files in .git (left by the sudo rebuild)..."
+    sudo chown -R "$(id -un)" "$DOTFILES_DIR/.git" ||
+      warn "Could not fix .git ownership. Run: sudo chown -R \"\$(whoami)\" $DOTFILES_DIR/.git"
+  fi
+}
+
 # The old setup.sh renamed ~/.config wholesale, stranding gh's auth in
 # ~/.config.pre-setup. Recover it while the real location is still empty.
 migrate_gh_config() {
@@ -192,6 +203,7 @@ clone_firstmate() {
 }
 
 run_imperative() {
+  repair_git_ownership
   migrate_gh_config
   auth_github
   auth_gitlab
