@@ -20,3 +20,20 @@ copy_mode  = "prefix+y"  # herdr's copy-mode entry key; copy-mode's own internal
 [ui]
 # Agents panel order: explicit choice of "spaces" (grouped by space, the default) over "priority".
 agent_panel_sort = "spaces"
+
+# herdr-sysmon: pin a floor wide enough for the 3-token metric rows; a short
+# workspace name would otherwise narrow the sidebar and truncate them.
+sidebar_min_width = 26
+
+# herdr-sysmon sidebar rows: $sys_* tokens are pushed by the plugin's poller
+# via `herdr workspace report-metadata --source sysmon`.
+[ui.sidebar.spaces]
+row_gap = 0
+rows = [
+  ["state_icon", "workspace"],
+  ["branch", "git_status"],
+  ["$sys_path", "$sys_zoom", "$sys_prefix"],
+  ["$sys_cpu", "$sys_mem", "$sys_batt"],
+  ["$sys_net", "$sys_disk"],
+  ["$sys_date", "$sys_time"],
+]

@@ -1,6 +1,9 @@
 # Machine-agnostic git behavior. Identity (name, emails, per-job overrides)
 # lives in ~/.gitconfig.local, which is never committed - see the example.
 
+[core]
+	editor = nvim
+
 [push]
 	autoSetupRemote = true
 
