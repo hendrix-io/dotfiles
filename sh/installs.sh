@@ -8,6 +8,7 @@
 # warns instead, so a routine rebuild never blocks on input.
 
 . sh/utils.sh
+. sh/skill-installs.sh
 
 FIRSTMATE_DIR="${FIRSTMATE_DIR:-$HOME/code/firstmate}"
 
@@ -97,7 +98,7 @@ setup_default_packages() {
 install_node_layer() {
   export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
   if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-    warn "nvm is not installed. Skipping node, gnhf, and the lavish skill."
+    warn "nvm is not installed. Skipping node, gnhf, and pnpm."
     return 0
   fi
   (
@@ -125,24 +126,6 @@ install_node_layer() {
       npm install -g pnpm || warn "pnpm failed to install"
     fi
 
-    # lavish: review agent-generated HTML in a browser. The CLI is
-    # install-free (`npx -y lavish-axi`); only the skill gets installed, at
-    # user level (-g) so it follows you across repos.
-    if [ ! -d "$HOME/.claude/skills/lavish" ]; then
-      info "Installing lavish skill..."
-      npx -y skills add kunchenguid/lavish-axi --skill lavish -g ||
-        warn "lavish skill failed to install"
-    fi
-
-    # belsrc skills: markdown-only instruction packs, reviewed before
-    # adoption. Installed for both the Claude Code and Codex harnesses.
-    for skill in ticket-creator engineering-council socratic-tutor; do
-      if [ ! -d "$HOME/.claude/skills/$skill" ] && [ ! -d "$HOME/.agents/skills/$skill" ]; then
-        info "Installing $skill skill..."
-        npx -y skills add -g -y belsrc/skills --skill "$skill" -a claude-code -a codex ||
-          warn "$skill skill failed to install"
-      fi
-    done
   ) || warn "node layer had errors - re-run ./rebuild.sh"
 }
 
@@ -246,6 +229,7 @@ run_imperative() {
   install_nvm
   setup_default_packages
   install_node_layer
+  install_skills
   install_bun
   install_claude
   install_no_mistakes
