@@ -89,9 +89,11 @@ This repo is written so someone who isn't me can clone it and run
    ./bootstrap.sh
    ```
 
-   HTTPS on purpose: you won't have SSH keys yet, and `gh auth login`
-   during bootstrap sets up push credentials for HTTPS (pick HTTPS and say
-   yes to "authenticate Git").
+   The HTTPS URL is the safe default: it works before any keys exist, and
+   `gh auth login` during bootstrap sets up push credentials for it (pick
+   HTTPS and say yes to "authenticate Git"). If this machine already has
+   SSH keys on your GitHub account, clone `git@github.com:YOUR-USERNAME/dotfiles.git`
+   instead and pick SSH during `gh auth login`.
 
    You're at the keyboard four times: your Mac password for sudo, **y** to
    the username rewrite, the browser auth for `gh`, and optionally
