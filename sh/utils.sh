@@ -33,6 +33,24 @@ in_cmd() {
   hash "$@" &> /dev/null
 }
 
+# Ask a yes/no question; echoes "y" or "n". Accepts y/yes/n/no in any
+# casing (tr, not ${var,,}: macOS ships bash 3.2). An empty answer or EOF
+# takes the default; anything else re-asks, so a typo can never opt a
+# machine into (or out of) an action.
+ask_yn() {
+  local prompt=$1 default=$2 reply
+  while true; do
+    read -r -p "$prompt" reply || reply=""
+    reply="$(printf '%s' "$reply" | tr '[:upper:]' '[:lower:]')"
+    case "$reply" in
+      y|yes) echo "y"; return ;;
+      n|no)  echo "n"; return ;;
+      "")    echo "$default"; return ;;
+      *)     printf 'Please answer y or n.\n' >&2 ;;
+    esac
+  done
+}
+
 # Verification report, the last phase of run_imperative. Deliberately never
 # fails: rebuild.sh must stay safe to run at any time, so a logged-out glab
 # or a missing tool is a warn line, not an exit code. Runs in a subshell so

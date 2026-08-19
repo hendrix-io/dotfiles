@@ -50,10 +50,9 @@ auth_gitlab() {
     return 0
   fi
   if [ "${INTERACTIVE:-0}" = "1" ]; then
-    read -r -p "Authenticate glab (GitLab) too? [y/N] " REPLY || REPLY=""
-    case "$REPLY" in
-      [yY]|[yY][eE][sS]) glab auth login || warn "glab auth login did not complete." ;;
-    esac
+    if [ "$(ask_yn "Authenticate glab (GitLab) too? [y/N] " n)" = "y" ]; then
+      glab auth login || warn "glab auth login did not complete."
+    fi
   else
     warn "glab is not authenticated. Run: glab auth login (skip if you don't use GitLab)"
   fi
