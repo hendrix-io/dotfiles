@@ -285,3 +285,10 @@ agent tooling this repo installs ([treehouse](https://github.com/kunchenguid/tre
 [lavish](https://github.com/kunchenguid/lavish-axi)) is his work too.
 His [walkthrough video](https://youtu.be/5N-okeDdIuI) covers the original
 setup this one grew from.
+
+The imperative shell layer predates the Nix port and comes from
+[belsrc's dotfiles](https://github.com/belsrc/.dotfiles), this repo's
+original skeleton: the `sh/utils.sh` output helpers, the guarded-installer
+pattern in `sh/installs.sh` (check for the tool, install only if missing,
+safe to re-run), and the bones of `.zshrc` - the Homebrew prefix detection
+and plugin sourcing - are his, as is Ghostty as the terminal of choice.
