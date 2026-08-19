@@ -110,7 +110,15 @@ warn "script, and on each later ./rebuild.sh), any brew package or app NOT"
 warn "listed in configuration.nix is uninstalled. \"none\": install what is"
 warn "listed, keep everything else. On a machine that already has Homebrew"
 warn "packages, choose n until the lists include everything you want to keep."
-if [ "$(ask_yn "Uninstall unlisted brew packages every time the config is applied? [y/N] " n)" = "y" ]; then
+# On a machine that has bootstrapped before (darwin-rebuild exists), default
+# to the committed value so pressing Enter on a re-run changes nothing. A
+# first run always defaults to the safe "none", whatever the fork committed.
+if [ "$CLEANUP" = "uninstall" ] && in_cmd darwin-rebuild; then
+  CLEANUP_DEFAULT="y"; CLEANUP_HINT="[Y/n]"
+else
+  CLEANUP_DEFAULT="n"; CLEANUP_HINT="[y/N]"
+fi
+if [ "$(ask_yn "Uninstall unlisted brew packages every time the config is applied? $CLEANUP_HINT " "$CLEANUP_DEFAULT")" = "y" ]; then
   TARGET="uninstall"
 else
   TARGET="none"
@@ -133,7 +141,14 @@ fi
 warn "The agent fleet is Claude Code, firstmate, gnhf, no-mistakes, herdr,"
 warn "the third-party skills, and the AGENTS.md links for every AI harness."
 warn "Answer n for a plain development machine with none of it."
-if [ "$(ask_yn "Install the AI/agent tooling? [Y/n] " y)" = "n" ]; then
+# Default to the committed value - the fork owner's standing choice - so
+# Enter on a re-run changes nothing.
+if [ "$AGENTS" = "true" ]; then
+  AGENTS_DEFAULT="y"; AGENTS_HINT="[Y/n]"
+else
+  AGENTS_DEFAULT="n"; AGENTS_HINT="[y/N]"
+fi
+if [ "$(ask_yn "Install the AI/agent tooling? $AGENTS_HINT " "$AGENTS_DEFAULT")" = "n" ]; then
   TARGET="false"
 else
   TARGET="true"
