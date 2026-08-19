@@ -133,6 +133,16 @@ install_node_layer() {
       npx -y skills add kunchenguid/lavish-axi --skill lavish -g ||
         warn "lavish skill failed to install"
     fi
+
+    # belsrc skills: markdown-only instruction packs, reviewed before
+    # adoption. Installed for both the Claude Code and Codex harnesses.
+    for skill in ticket-creator engineering-council socratic-tutor; do
+      if [ ! -d "$HOME/.claude/skills/$skill" ] && [ ! -d "$HOME/.agents/skills/$skill" ]; then
+        info "Installing $skill skill..."
+        npx -y skills add -g -y belsrc/skills --skill "$skill" -a claude-code -a codex ||
+          warn "$skill skill failed to install"
+      fi
+    done
   ) || warn "node layer had errors - re-run ./rebuild.sh"
 }
 
