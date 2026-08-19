@@ -79,6 +79,7 @@ verify_installations() {
 
     if [ "${AGENTS_ENABLED:-1}" = "1" ]; then
       if command -v claude > /dev/null 2>&1; then success "claude: installed"; else warn "claude: not found"; fi
+      if command -v codex > /dev/null 2>&1; then success "codex: installed"; else warn "codex: not found"; fi
       if command -v no-mistakes > /dev/null 2>&1; then success "no-mistakes: installed"; else warn "no-mistakes: not found"; fi
       skill_count=$(find "$HOME/.claude/skills" -maxdepth 1 -mindepth 1 2>/dev/null | wc -l | tr -d ' ')
       success "skills: ${skill_count:-0} installed"

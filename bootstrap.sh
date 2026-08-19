@@ -138,8 +138,8 @@ if [ -z "$AGENTS" ]; then
   err "Could not find the agents line in flake.nix."
   exit 1
 fi
-warn "The agent fleet is Claude Code, firstmate, gnhf, no-mistakes, herdr,"
-warn "the third-party skills, and the AGENTS.md links for every AI harness."
+warn "The agent fleet is Claude Code, Codex, firstmate, gnhf, no-mistakes,"
+warn "herdr, the third-party skills, and the AGENTS.md links for every AI harness."
 warn "Answer n for a plain development machine with none of it."
 # Default to the committed value - the fork owner's standing choice - so
 # Enter on a re-run changes nothing.

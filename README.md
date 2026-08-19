@@ -21,6 +21,8 @@ see [Credits](#credits).
 - **Node toolchain** - nvm with `.nvmrc` auto-switching, node LTS, pnpm, bun
 - **Claude Code** - via its native installer into `~/.local/bin` (deliberately
   not the brew cask, which would be a second, competing install)
+- **Codex** - OpenAI's terminal agent, npm global; inert until you log in
+  (an existing ChatGPT account works)
 - **[gnhf](https://github.com/kunchenguid/gnhf)** - overnight agent loop orchestrator, npm global, kept alive across node upgrades via nvm's `default-packages`
 - **[no-mistakes](https://github.com/kunchenguid/no-mistakes)** - local validation gate, aliased to `gate`
 - **[lavish](https://github.com/kunchenguid/lavish-axi)** - review agent-generated HTML in a browser; skill installed at user level
@@ -41,7 +43,7 @@ cd ~/dotfiles
 3. Checks the `user` in `flake.nix` against your macOS username and offers to fix a mismatch.
 4. Checks `nixpkgs.hostPlatform` against your CPU (`uname -m`) and rewrites it if it's wrong - no question asked, uname knows better.
 5. Asks whether brew packages missing from the repo's lists should be uninstalled whenever the config is applied, and writes your answer into `configuration.nix` (see [Homebrew cleanup](#homebrew-cleanup)).
-6. Asks whether to install the AI/agent tooling (Claude Code, firstmate, gnhf, no-mistakes, herdr, the skills, the `AGENTS.md` links), and writes your answer into `flake.nix`. Answer **n** for a plain development machine with none of it.
+6. Asks whether to install the AI/agent tooling (Claude Code, Codex, firstmate, gnhf, no-mistakes, herdr, the skills, the `AGENTS.md` links), and writes your answer into `flake.nix`. Answer **n** for a plain development machine with none of it.
 7. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
 8. Runs the imperative layer in phases: machine setup (auth, local files), global tools (node, pnpm, bun, openspec), the agent fleet and skills (if enabled), and a verification report.
 

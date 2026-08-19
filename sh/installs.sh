@@ -56,7 +56,7 @@ run_imperative() {
   else
     info "[3/5] Agent fleet skipped (agents = false in flake.nix)"
     info "[4/5] Agent skills skipped"
-    remove_gnhf_default_package
+    remove_agent_default_packages
     echo ""
   fi
 

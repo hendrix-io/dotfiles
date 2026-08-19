@@ -91,19 +91,50 @@ clone_firstmate() {
     warn "firstmate clone failed"
 }
 
-# The flip-off counterpart to install_gnhf: without this, a stale entry in
-# default-packages reinstalls the agent orchestrator on every node upgrade
-# of a machine that turned the fleet off.
-remove_gnhf_default_package() {
-  local f="${NVM_DIR:-$HOME/.nvm}/default-packages"
-  if [ -f "$f" ] && grep -qx "gnhf" "$f"; then
-    info "Removing gnhf from nvm default-packages (agents = false)..."
-    grep -vx "gnhf" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+# Codex, OpenAI's terminal agent. The fleet is deliberately harness-agnostic:
+# skills already install for Codex and ~/.codex/AGENTS.md is already linked,
+# so the CLI itself rides along. Inert until `codex` logs in - an existing
+# ChatGPT account works, no separate billing.
+install_codex() {
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+    warn "nvm is not installed. Skipping codex."
+    return 0
   fi
+  local f="$NVM_DIR/default-packages"
+  touch "$f"
+  if ! grep -qx "@openai/codex" "$f"; then
+    info "Adding @openai/codex to nvm default-packages..."
+    echo "@openai/codex" >> "$f"
+  fi
+  (
+    set +eu
+    . "$NVM_DIR/nvm.sh"
+    if ! command -v codex > /dev/null 2>&1; then
+      info "Installing Codex..."
+      npm install -g @openai/codex || warn "codex failed to install"
+    fi
+  ) || warn "codex install had errors - re-run ./rebuild.sh"
+}
+
+# The flip-off counterpart to the installers above: without this, stale
+# entries in default-packages reinstall agent CLIs on every node upgrade
+# of a machine that turned the fleet off.
+remove_agent_default_packages() {
+  local f="${NVM_DIR:-$HOME/.nvm}/default-packages"
+  [ -f "$f" ] || return 0
+  local pkg
+  for pkg in gnhf @openai/codex; do
+    if grep -qx "$pkg" "$f"; then
+      info "Removing $pkg from nvm default-packages (agents = false)..."
+      grep -vx "$pkg" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    fi
+  done
 }
 
 run_agent_installs() {
   install_claude
+  install_codex
   install_gnhf
   install_no_mistakes
   clone_firstmate
