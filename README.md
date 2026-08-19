@@ -34,15 +34,16 @@ cd ~/dotfiles
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` does seven things, in order:
+`bootstrap.sh` does eight things, in order:
 
 1. Installs Determinate Nix, if it isn't already installed.
 2. Symlinks this repo to `~/.dotfiles` (home.nix resolves its file links through that path).
 3. Checks the `user` in `flake.nix` against your macOS username and offers to fix a mismatch.
 4. Checks `nixpkgs.hostPlatform` against your CPU (`uname -m`) and rewrites it if it's wrong - no question asked, uname knows better.
 5. Asks whether brew packages missing from the repo's lists should be uninstalled whenever the config is applied, and writes your answer into `configuration.nix` (see [Homebrew cleanup](#homebrew-cleanup)).
-6. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
-7. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain, Claude Code, and the agent tools, clones firstmate.
+6. Asks whether to install the AI/agent tooling (Claude Code, firstmate, gnhf, no-mistakes, herdr, the skills, the `AGENTS.md` links), and writes your answer into `flake.nix`. Answer **n** for a plain development machine with none of it.
+7. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
+8. Runs the imperative layer in phases: machine setup (auth, local files), global tools (node, pnpm, bun, openspec), the agent fleet and skills (if enabled), and a verification report.
 
 Auth is the only part that needs you at the keyboard. Everything else is unattended.
 
@@ -69,6 +70,10 @@ This repo is written so someone who isn't me can clone it and run
 - **Tools you already have are left alone.** Every imperative installer is
   guarded: existing nvm, node, pnpm, bun, or Claude Code installs are
   detected and skipped.
+- **The AI tooling is optional.** Bootstrap asks once; answer **n** and no
+  agent fleet, skills, herdr, or AGENTS.md links are installed - just a
+  normal development machine. The answer is committed to your fork like the
+  username.
 - **macOS defaults ARE applied** - dark mode, dock autohide, fast key
   repeat, tap to click. Edit `system.defaults` in `configuration.nix`
   before bootstrapping if you feel strongly.
@@ -122,9 +127,10 @@ config. That part is manual, in this order:
    SSH keys on your GitHub account, clone `git@github.com:YOUR-USERNAME/dotfiles.git`
    instead and pick SSH during `gh auth login`.
 
-   You're at the keyboard five times: your Mac password for sudo, **y** to
+   You're at the keyboard six times: your Mac password for sudo, **y** to
    the username rewrite, **n** to the Homebrew cleanup question (unless
-   you've already filled the package lists with what you want kept), the
+   you've already filled the package lists with what you want kept),
+   **y/n** to the AI/agent tooling question (n = plain dev machine), the
    browser auth for `gh`, and optionally skipping glab.
 
 3. Restart the terminal, then claim your identity and salvage your old
@@ -213,11 +219,17 @@ still override it. Codex and Cursor aren't installed by this repo - but if
 you use them, their global instructions are already wired the moment they
 are (`npm i -g @openai/codex`, `brew install --cask cursor`).
 
-`~/.claude/settings.json` IS managed here. This is a personal machine, so the
-file holds nothing but personal preferences; on a work machine that mixes in
-employer-provided config (API proxy, auth helper), leave it machine-local
-instead - Claude Code reads a single user-level settings file, and replacing
-the work half breaks it.
+`~/.claude/settings.json` is deliberately NOT symlinked into this repo:
+Claude Code writes runtime config into that file, and a live symlink would
+put those writes one `git add` away from a public repo. The repo commits
+`home/.claude/settings.template.json` instead; bootstrap seeds the live file
+from it once, and from then on the machine owns it. Edit preferences you
+want on every future machine in the template, machine-local ones live.
+
+Skills are installed by `sh/skill-installs.sh` and pinned by their guards -
+a rebuild never changes an installed skill. Update them deliberately with
+`npx -y skills update -g`, and skim what changed after: updated skills are
+new instruction text running with full agent permissions.
 
 ## Agent fleet
 
@@ -255,15 +267,19 @@ dotfiles/
 ├── configuration.nix  # system layer: macOS defaults, Homebrew lists
 ├── home.nix           # user layer: packages, symlinks into home/
 ├── AGENTS.md          # shared agent instructions, linked to 3 locations
-├── bootstrap.sh       # first run: nix install, first switch, auth, clones
+├── bootstrap.sh       # first run: nix install, questions, first switch, auth
 ├── rebuild.sh         # every later change; never prompts
 ├── sh/
-│   ├── utils.sh       # helpers and colored output
-│   └── installs.sh    # the imperative layer: guarded installers, auth, firstmate
+│   ├── utils.sh          # colors, guards, the verification report
+│   ├── installs.sh       # the phased orchestrator; sources the modules below
+│   ├── machine.sh        # git ownership, gh recovery, auth, local-file seeding
+│   ├── tool-installs.sh  # nvm, node, pnpm, bun, openspec
+│   ├── agent-installs.sh # claude, gnhf, no-mistakes, firstmate, settings seed
+│   └── skill-installs.sh # third-party agent skills
 └── home/              # the real config files, symlinked into ~
     ├── .zshrc
     ├── .zshrc.local.example
-    ├── .claude/settings.json
+    ├── .claude/settings.template.json
     └── .config/
         ├── ghostty/config
         ├── herdr/config.toml

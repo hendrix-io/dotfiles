@@ -1,4 +1,4 @@
-{ config, pkgs, user, inputs, ... }:
+{ config, pkgs, lib, user, agents, inputs, ... }:
 
 let
   dotfiles = "${config.home.homeDirectory}/.dotfiles";
@@ -44,17 +44,23 @@ in
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/ghostty";
   home.file.".config/herdr".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/herdr";
-  # Fine to manage on a personal machine: nothing employer-provided in it.
-  home.file.".claude/settings.json".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.claude/settings.json";
+  # ~/.claude/settings.json is deliberately NOT linked: Claude Code writes
+  # runtime config into it, and a live symlink would land those writes in
+  # this public repo. sh/agent-installs.sh seeds it once from the committed
+  # settings.template.json instead; after that, the machine owns it.
 
-  # One AGENTS.md, read by every agent.
-  home.file.".claude/CLAUDE.md".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/AGENTS.md";
-  home.file.".codex/AGENTS.md".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/AGENTS.md";
-  home.file.".config/opencode/AGENTS.md".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/AGENTS.md";
-  home.file.".cursor/AGENTS.md".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/AGENTS.md";
+  # One AGENTS.md, read by every agent. Gated with the fleet: a no-agents
+  # machine gets no instruction links to nowhere.
+  home.file.".claude/CLAUDE.md" = lib.mkIf agents {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/AGENTS.md";
+  };
+  home.file.".codex/AGENTS.md" = lib.mkIf agents {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/AGENTS.md";
+  };
+  home.file.".config/opencode/AGENTS.md" = lib.mkIf agents {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/AGENTS.md";
+  };
+  home.file.".cursor/AGENTS.md" = lib.mkIf agents {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/AGENTS.md";
+  };
 }

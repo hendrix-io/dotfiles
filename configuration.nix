@@ -1,4 +1,4 @@
-{ user, ... }:
+{ user, agents, lib, ... }:
 
 {
   # Determinate manages the Nix daemon itself, so nix-darwin must not.
@@ -45,11 +45,14 @@
     onActivation.autoUpdate = true;
     onActivation.extraFlags = [ "--force" ];
     brews = [
-      "herdr"
       # .zshrc sources both plugins from $HOMEBREW_PREFIX/share, so they have
       # to come from brew, not nix.
       "zsh-autosuggestions"
       "zsh-syntax-highlighting"
+    ] ++ lib.optionals agents [
+      # herdr is agent tooling; the agents flag in flake.nix gates it. With
+      # cleanup = "uninstall", flipping the flag off also removes it.
+      "herdr"
     ];
     casks = [
       "ghostty"

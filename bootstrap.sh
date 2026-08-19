@@ -13,6 +13,31 @@ export DOTFILES_DIR="$DIR"
 . sh/utils.sh
 . sh/installs.sh
 
+if [ "${1:-}" = "--help" ]; then
+  echo ""
+  echo "bootstrap.sh - take a fresh Mac to the full setup. Run once."
+  echo ""
+  echo "You're at the keyboard for: your password (sudo), the flake username"
+  echo "rewrite, the Homebrew cleanup choice, the AI/agent tooling choice,"
+  echo "and gh auth. Everything else is unattended."
+  echo ""
+  echo "After it finishes, use ./rebuild.sh for every later change."
+  echo ""
+  exit 0
+fi
+
+# The banner is cosmetic; tput fails without a tty, so fall back to plain.
+printf "%s" "$(tput setaf 13 2>/dev/null || true)"
+cat <<'BANNER'
+██╗  ██╗███████╗███╗   ██╗██████╗ ██████╗ ██╗██╗  ██╗      ██╗ ██████╗
+██║  ██║██╔════╝████╗  ██║██╔══██╗██╔══██╗██║╚██╗██╔╝      ██║██╔═══██╗
+███████║█████╗  ██╔██╗ ██║██║  ██║██████╔╝██║ ╚███╔╝ █████╗██║██║   ██║
+██╔══██║██╔══╝  ██║╚██╗██║██║  ██║██╔══██╗██║ ██╔██╗ ╚════╝██║██║   ██║
+██║  ██║███████╗██║ ╚████║██████╔╝██║  ██║██║██╔╝ ██╗      ██║╚██████╔╝
+╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝      ╚═╝ ╚═════╝
+BANNER
+printf "%s\n" "$(tput sgr0 2>/dev/null || true)"
+
 info "Step 1: Determinate Nix"
 if in_cmd nix; then
   info "nix is already installed. Skipping."
@@ -97,7 +122,31 @@ else
   info "Already \"$TARGET\". Nothing to do."
 fi
 
-info "Step 6: first darwin-rebuild switch"
+info "Step 6: choose whether to install the AI/agent tooling"
+# Settled before the first switch because the flag also gates nix-side
+# pieces (the herdr brew, the AGENTS.md links).
+AGENTS="$(sed -nE 's/^[[:space:]]*agents = (true|false);.*/\1/p' flake.nix | head -n1)"
+if [ -z "$AGENTS" ]; then
+  err "Could not find the agents line in flake.nix."
+  exit 1
+fi
+warn "The agent fleet is Claude Code, firstmate, gnhf, no-mistakes, herdr,"
+warn "the third-party skills, and the AGENTS.md links for every AI harness."
+warn "Answer n for a plain development machine with none of it."
+read -r -p "Install the AI/agent tooling? [Y/n] " REPLY
+if [ "$REPLY" = "n" ] || [ "$REPLY" = "N" ]; then
+  TARGET="false"
+else
+  TARGET="true"
+fi
+if [ "$TARGET" != "$AGENTS" ]; then
+  sed -i '' -E "s/^([[:space:]]*agents = )(true|false)(;.*)/\1${TARGET}\3/" flake.nix
+  info "Updated to ${TARGET}. Review the change with: git diff flake.nix"
+else
+  info "Already ${TARGET}. Nothing to do."
+fi
+
+info "Step 7: first darwin-rebuild switch"
 # darwin-rebuild doesn't exist yet on a fresh machine, so run it straight
 # from the nix-darwin flake this once. The system config it applies is still
 # pinned by this repo's flake.lock.
@@ -112,7 +161,7 @@ sudo "$NIX_BIN" run github:nix-darwin/nix-darwin/nix-darwin-26.05#darwin-rebuild
 # If this fails with "nix: command not found", open a new terminal
 # (Determinate adds nix to new shells' PATH) and re-run ./bootstrap.sh.
 
-info "Step 7: imperative layer (auth, node toolchain, firstmate)"
+info "Step 8: imperative layer (auth, node toolchain, agent fleet)"
 INTERACTIVE=1 run_imperative
 
 success "Done. Use ./rebuild.sh for future changes."

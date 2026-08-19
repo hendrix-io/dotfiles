@@ -15,6 +15,17 @@ export DOTFILES_DIR="$DIR"
 . sh/utils.sh
 . sh/installs.sh
 
+if [ "${1:-}" = "--help" ]; then
+  echo ""
+  echo "rebuild.sh - re-apply the config after a change. Never prompts."
+  echo ""
+  echo "Run after editing a package list, a macOS default, or the set of"
+  echo "linked files. Editing an already-linked file needs no rebuild - the"
+  echo "symlinks point into this repo, so those edits are live immediately."
+  echo ""
+  exit 0
+fi
+
 if ! in_cmd darwin-rebuild; then
   err "darwin-rebuild not found. Run ./bootstrap.sh first."
   exit 1
