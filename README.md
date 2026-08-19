@@ -34,13 +34,14 @@ cd ~/dotfiles
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` does five things, in order:
+`bootstrap.sh` does six things, in order:
 
 1. Installs Determinate Nix, if it isn't already installed.
 2. Symlinks this repo to `~/.dotfiles` (home.nix resolves its file links through that path).
 3. Checks the `user` in `flake.nix` against your macOS username and offers to fix a mismatch.
-4. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
-5. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain, Claude Code, and the agent tools, clones firstmate.
+4. Checks `nixpkgs.hostPlatform` against your CPU (`uname -m`) and rewrites it if it's wrong - no question asked, uname knows better.
+5. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
+6. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain, Claude Code, and the agent tools, clones firstmate.
 
 Auth is the only part that needs you at the keyboard. Everything else is unattended.
 
@@ -71,9 +72,57 @@ This repo is written so someone who isn't me can clone it and run
   before bootstrapping if you feel strongly.
 - **Your git identity is yours.** Bootstrap creates `~/.gitconfig.local`
   from the example; put your name and email there. It is never committed.
-- **Intel Macs**: change `nixpkgs.hostPlatform` in `configuration.nix` to
-  `x86_64-darwin` first (OpenSuperWhisper won't install there; brew
-  declines it on Intel).
+- **Intel Macs work without edits.** Bootstrap detects the CPU and rewrites
+  `nixpkgs.hostPlatform` itself. (OpenSuperWhisper won't install there;
+  brew declines it on Intel - everything else is unaffected.)
+
+### Fork-and-run, step by step
+
+1. Fork this repo on GitHub, keeping the name `dotfiles`.
+2. In Terminal (a Mac that has never had dev tools will pop the Xcode
+   Command Line Tools dialog on the first `git` command - accept, wait,
+   rerun):
+
+   ```sh
+   git clone https://github.com/YOUR-USERNAME/dotfiles.git ~/dotfiles
+   cd ~/dotfiles
+   ./bootstrap.sh
+   ```
+
+   HTTPS on purpose: you won't have SSH keys yet, and `gh auth login`
+   during bootstrap sets up push credentials for HTTPS (pick HTTPS and say
+   yes to "authenticate Git").
+
+   You're at the keyboard four times: your Mac password for sudo, **y** to
+   the username rewrite, the browser auth for `gh`, and optionally
+   skipping glab.
+
+3. Restart the terminal, then claim your identity and salvage your old
+   shell config:
+
+   ```sh
+   nvim ~/.gitconfig.local   # your name + GitHub noreply email
+   nvim ~/.zshrc.local       # paste keepers from ~/.zshrc.hm-backup
+   ```
+
+4. Commit the machine-specific rewrites to your fork:
+
+   ```sh
+   git add flake.nix configuration.nix
+   git commit -m "chore: my username and platform"
+   git push
+   ```
+
+To pull future improvements from upstream later:
+
+```sh
+git remote add upstream https://github.com/hendrix-io/dotfiles.git
+git pull upstream main
+```
+
+That merges cleanly as long as your divergence stays small (the username
+line, the platform line, and whatever you prune from `run_imperative` or
+`system.defaults` because it isn't for you).
 
 ### Validate without applying
 

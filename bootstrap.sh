@@ -51,7 +51,26 @@ else
   info "flake.nix already matches \"$REAL_USER\". Nothing to do."
 fi
 
-info "Step 4: first darwin-rebuild switch"
+info "Step 4: check the configured CPU platform"
+# Unlike the username, there is nothing to ask: uname is the ground truth.
+case "$(uname -m)" in
+  arm64)  PLATFORM="aarch64-darwin" ;;
+  x86_64) PLATFORM="x86_64-darwin" ;;
+  *) err "Unsupported CPU: $(uname -m)"; exit 1 ;;
+esac
+FLAKE_PLATFORM="$(sed -nE 's/^[[:space:]]*nixpkgs\.hostPlatform = "([^"]+)";.*/\1/p' configuration.nix | head -n1)"
+if [ -z "$FLAKE_PLATFORM" ]; then
+  err "Could not find the nixpkgs.hostPlatform line in configuration.nix."
+  exit 1
+elif [ "$FLAKE_PLATFORM" != "$PLATFORM" ]; then
+  info "This is a $PLATFORM machine; rewriting configuration.nix (was $FLAKE_PLATFORM)."
+  sed -i '' -E "s/^([[:space:]]*nixpkgs\.hostPlatform = \")[^\"]+(\";.*)/\1${PLATFORM}\2/" configuration.nix
+  info "Updated. Review the change with: git diff configuration.nix"
+else
+  info "configuration.nix already matches $PLATFORM. Nothing to do."
+fi
+
+info "Step 5: first darwin-rebuild switch"
 # darwin-rebuild doesn't exist yet on a fresh machine, so run it straight
 # from the nix-darwin flake this once. The system config it applies is still
 # pinned by this repo's flake.lock.
@@ -66,7 +85,7 @@ sudo "$NIX_BIN" run github:nix-darwin/nix-darwin/nix-darwin-26.05#darwin-rebuild
 # If this fails with "nix: command not found", open a new terminal
 # (Determinate adds nix to new shells' PATH) and re-run ./bootstrap.sh.
 
-info "Step 5: imperative layer (auth, node toolchain, firstmate)"
+info "Step 6: imperative layer (auth, node toolchain, firstmate)"
 INTERACTIVE=1 run_imperative
 
 success "Done. Use ./rebuild.sh for future changes."
