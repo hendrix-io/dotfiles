@@ -91,26 +91,14 @@ clone_firstmate() {
     warn "firstmate clone failed"
 }
 
-# ~/.claude/settings.json is deliberately a real file, not a repo symlink:
-# Claude Code writes runtime config into it, and a live symlink would land
-# those writes in this public repo's working tree (that nearly leaked
-# fr8factory internals once). Seed it from the committed template; after
-# that, the machine owns it.
-setup_claude_settings() {
-  if [ -f "$HOME/.claude/settings.json" ]; then
-    return 0
-  fi
-  mkdir -p "$HOME/.claude"
-  if [ -f "$DOTFILES_DIR/home/.claude/settings.json" ]; then
-    # One-time migration from the old symlinked layout: adopt the previous
-    # live content instead of resetting to the template. The file is
-    # untracked (gitignored) by the time this branch exists, so the move
-    # cannot lose anything git holds.
-    info "Migrating ~/.claude/settings.json out of the repo..."
-    mv "$DOTFILES_DIR/home/.claude/settings.json" "$HOME/.claude/settings.json"
-  else
-    info "Seeding ~/.claude/settings.json from the template..."
-    cp "$DOTFILES_DIR/home/.claude/settings.template.json" "$HOME/.claude/settings.json"
+# The flip-off counterpart to install_gnhf: without this, a stale entry in
+# default-packages reinstalls the agent orchestrator on every node upgrade
+# of a machine that turned the fleet off.
+remove_gnhf_default_package() {
+  local f="${NVM_DIR:-$HOME/.nvm}/default-packages"
+  if [ -f "$f" ] && grep -qx "gnhf" "$f"; then
+    info "Removing gnhf from nvm default-packages (agents = false)..."
+    grep -vx "gnhf" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
   fi
 }
 
@@ -119,5 +107,4 @@ run_agent_installs() {
   install_gnhf
   install_no_mistakes
   clone_firstmate
-  setup_claude_settings
 }

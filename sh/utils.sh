@@ -48,7 +48,13 @@ verify_installations() {
     if command -v pnpm > /dev/null 2>&1; then success "pnpm: $(pnpm --version)"; else warn "pnpm: not found"; fi
     if command -v bun > /dev/null 2>&1; then success "bun: $(bun --version)"; else warn "bun: not found"; fi
     if command -v openspec > /dev/null 2>&1; then success "openspec: $(openspec --version 2>/dev/null | head -1)"; else warn "openspec: not found"; fi
-    if gh auth status > /dev/null 2>&1; then success "gh: authenticated"; else warn "gh: not authenticated (run: gh auth login)"; fi
+    if ! command -v gh > /dev/null 2>&1; then
+      warn "gh: not on PATH (fresh bootstrap? restart the terminal, then re-run ./rebuild.sh)"
+    elif gh auth status > /dev/null 2>&1; then
+      success "gh: authenticated"
+    else
+      warn "gh: not authenticated (run: gh auth login)"
+    fi
     if command -v glab > /dev/null 2>&1; then
       if glab auth status > /dev/null 2>&1; then success "glab: authenticated"; else warn "glab: not authenticated (run: glab auth login)"; fi
     fi

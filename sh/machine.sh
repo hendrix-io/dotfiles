@@ -50,12 +50,54 @@ auth_gitlab() {
     return 0
   fi
   if [ "${INTERACTIVE:-0}" = "1" ]; then
-    read -r -p "Authenticate glab (GitLab) too? [y/N] " REPLY
-    if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
-      glab auth login || warn "glab auth login did not complete."
-    fi
+    read -r -p "Authenticate glab (GitLab) too? [y/N] " REPLY || REPLY=""
+    case "$REPLY" in
+      [yY]|[yY][eE][sS]) glab auth login || warn "glab auth login did not complete." ;;
+    esac
   else
     warn "glab is not authenticated. Run: glab auth login (skip if you don't use GitLab)"
+  fi
+}
+
+# ~/.claude/settings.json is deliberately a real file, not a repo symlink:
+# Claude Code writes runtime config into it, and a live symlink would land
+# those writes in this public repo's working tree (that nearly leaked
+# fr8factory internals once). Runs unconditionally - even with agents off -
+# so a machine migrating from the old symlinked layout never loses its
+# settings; only the template seeding is gated on the fleet.
+setup_claude_settings() {
+  local live="$HOME/.claude/settings.json"
+  local snapshot="$HOME/.claude/settings.json.pre-migration"
+  local old_repo_copy="$DOTFILES_DIR/home/.claude/settings.json"
+
+  # A surviving symlink means Claude still writes into the repo - the exact
+  # leak this layout exists to prevent. Capture its content (if it still
+  # resolves) and remove the link no matter what.
+  if [ -L "$live" ]; then
+    if [ -e "$live" ]; then
+      cp -L "$live" "$snapshot"
+    fi
+    rm -f "$live"
+  fi
+
+  if [ -f "$live" ]; then
+    return 0
+  fi
+
+  if [ -f "$snapshot" ]; then
+    info "Migrating ~/.claude/settings.json out of the repo..."
+    mkdir -p "$HOME/.claude"
+    mv "$snapshot" "$live"
+  elif [ -f "$old_repo_copy" ] && [ ! -L "$old_repo_copy" ]; then
+    # Old-layout machines kept the live content at this (now untracked)
+    # repo path; adopt it instead of resetting to the template.
+    info "Migrating ~/.claude/settings.json out of the repo..."
+    mkdir -p "$HOME/.claude"
+    mv "$old_repo_copy" "$live"
+  elif [ "${AGENTS_ENABLED:-1}" = "1" ]; then
+    info "Seeding ~/.claude/settings.json from the template..."
+    mkdir -p "$HOME/.claude"
+    cp "$DOTFILES_DIR/home/.claude/settings.template.json" "$live"
   fi
 }
 
@@ -86,4 +128,5 @@ run_machine_setup() {
   auth_gitlab
   setup_gitconfig_local
   setup_zshrc_local
+  setup_claude_settings
 }

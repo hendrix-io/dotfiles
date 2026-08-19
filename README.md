@@ -13,8 +13,8 @@ see [Credits](#credits).
 
 - **macOS settings** - dark mode, fast key repeat, dock autohide, Finder list view, tap to click
 - **CLI tools** - git, gh, glab, ripgrep, fd, fzf, jq, lazygit, neovim, tmux, starship, [treehouse](https://github.com/kunchenguid/treehouse) (via its own flake input)
-- **Homebrew** - ghostty, Hack Nerd Font, [OpenSuperWhisper](https://github.com/Starmel/OpenSuperWhisper), [herdr](https://herdr.dev), the zsh plugins `.zshrc` sources from brew's share dir
-- **Linked configs** - zsh, starship, ghostty, herdr, `~/.claude/settings.json`, and one `AGENTS.md` for every agent
+- **Homebrew** - ghostty, Hack Nerd Font, [OpenSuperWhisper](https://github.com/Starmel/OpenSuperWhisper), the zsh plugins `.zshrc` sources from brew's share dir, and [herdr](https://herdr.dev) when the agent tooling is enabled
+- **Linked configs** - zsh, starship, ghostty, nvim; with agent tooling enabled, also herdr and one `AGENTS.md` for every agent. (`~/.claude/settings.json` is deliberately NOT linked - see [Agent instructions](#agent-instructions))
 
 **Imperative (guarded installers, same scripts re-run safely)**
 
@@ -73,7 +73,9 @@ This repo is written so someone who isn't me can clone it and run
 - **The AI tooling is optional.** Bootstrap asks once; answer **n** and no
   agent fleet, skills, herdr, or AGENTS.md links are installed - just a
   normal development machine. The answer is committed to your fork like the
-  username.
+  username. Flipping an existing machine to `agents = false` stops managing
+  the fleet and uninstalls herdr, but already-installed tools (Claude Code,
+  firstmate, skills) stay on disk until you remove them yourself.
 - **macOS defaults ARE applied** - dark mode, dock autohide, fast key
   repeat, tap to click. Edit `system.defaults` in `configuration.nix`
   before bootstrapping if you feel strongly.
@@ -266,7 +268,7 @@ dotfiles/
 ├── flake.nix          # entry point: nixpkgs, nix-darwin, home-manager, treehouse
 ├── configuration.nix  # system layer: macOS defaults, Homebrew lists
 ├── home.nix           # user layer: packages, symlinks into home/
-├── AGENTS.md          # shared agent instructions, linked to 3 locations
+├── AGENTS.md          # shared agent instructions, linked to 4 harnesses
 ├── bootstrap.sh       # first run: nix install, questions, first switch, auth
 ├── rebuild.sh         # every later change; never prompts
 ├── sh/

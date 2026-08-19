@@ -33,6 +33,14 @@ fi
 
 ln -sfn "$DIR" ~/.dotfiles
 
+# Migration aid for machines coming from the old layout, where the live
+# Claude settings were a symlink into this repo: the switch is about to
+# remove that link, so save the content first. sh/machine.sh adopts the
+# snapshot afterwards.
+if [ -L "$HOME/.claude/settings.json" ] && [ -e "$HOME/.claude/settings.json" ]; then
+  cp -L "$HOME/.claude/settings.json" "$HOME/.claude/settings.json.pre-migration"
+fi
+
 info "Applying the declarative config..."
 sudo darwin-rebuild switch --flake ~/.dotfiles#mac
 success "System config applied"

@@ -12,39 +12,54 @@
 . sh/skill-installs.sh
 
 # The agents flag lives in flake.nix (bootstrap asks once and rewrites it),
-# so the nix layer and this one gate on the same committed value. Missing
-# line means enabled, which matches checkouts that predate the flag.
+# so the nix layer and this one gate on the same committed value. An
+# unparseable or missing line warns and defaults to enabled, which matches
+# checkouts that predate the flag - and mirrors nix, which would fail eval
+# outright if the binding disappeared.
 agents_enabled() {
-  [ "$(sed -nE 's/^[[:space:]]*agents = (true|false);.*/\1/p' "${DOTFILES_DIR:-.}/flake.nix" | head -n1)" != "false" ]
+  local v
+  v="$(sed -nE 's/^[[:space:]]*agents[[:space:]]*=[[:space:]]*(true|false)[[:space:]]*;.*/\1/p' "${DOTFILES_DIR:-.}/flake.nix" | head -n1)"
+  if [ -z "$v" ]; then
+    warn "Could not read the agents flag from flake.nix; assuming enabled."
+    v="true"
+  fi
+  [ "$v" != "false" ]
 }
 
 run_imperative() {
-  info "⒈ Machine setup..."
+  if agents_enabled; then
+    AGENTS_ENABLED=1
+  else
+    AGENTS_ENABLED=0
+  fi
+  export AGENTS_ENABLED
+
+  info "[1/5] Machine setup..."
   run_machine_setup
   success "Machine setup complete"
   echo ""
 
-  info "⒉ Global tools..."
+  info "[2/5] Global tools..."
   run_tool_installs
   success "Global tools installed"
   echo ""
 
-  if agents_enabled; then
-    export AGENTS_ENABLED=1
-    info "⒊ Agent fleet..."
+  if [ "$AGENTS_ENABLED" = "1" ]; then
+    info "[3/5] Agent fleet..."
     run_agent_installs
     success "Agent fleet installed"
     echo ""
 
-    info "⒋ Agent skills..."
+    info "[4/5] Agent skills..."
     install_skills
     echo ""
   else
-    export AGENTS_ENABLED=0
-    info "⒊ Agent fleet and skills skipped (agents = false in flake.nix)"
+    info "[3/5] Agent fleet skipped (agents = false in flake.nix)"
+    info "[4/5] Agent skills skipped"
+    remove_gnhf_default_package
     echo ""
   fi
 
-  info "⒌ Verifying installations..."
+  info "[5/5] Verifying installations..."
   verify_installations
 }

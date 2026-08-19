@@ -42,8 +42,12 @@ in
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/nvim";
   home.file.".config/ghostty".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/ghostty";
-  home.file.".config/herdr".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/herdr";
+  # Gated with the fleet: herdr itself is only brewed when agents = true,
+  # and an unmanaged herdr writing session state through this link would
+  # land it inside the public repo.
+  home.file.".config/herdr" = lib.mkIf agents {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/herdr";
+  };
   # ~/.claude/settings.json is deliberately NOT linked: Claude Code writes
   # runtime config into it, and a live symlink would land those writes in
   # this public repo. sh/agent-installs.sh seeds it once from the committed

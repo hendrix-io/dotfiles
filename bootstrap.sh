@@ -26,8 +26,9 @@ if [ "${1:-}" = "--help" ]; then
   exit 0
 fi
 
-# The banner is cosmetic; tput fails without a tty, so fall back to plain.
-printf "%s" "$(tput setaf 13 2>/dev/null || true)"
+# The banner is cosmetic; only colorize on a real terminal so piped or
+# logged output never carries raw escape bytes.
+[ -t 1 ] && printf "%s" "$(tput setaf 13 2>/dev/null || true)"
 cat <<'BANNER'
 ██╗  ██╗███████╗███╗   ██╗██████╗ ██████╗ ██╗██╗  ██╗      ██╗ ██████╗
 ██║  ██║██╔════╝████╗  ██║██╔══██╗██╔══██╗██║╚██╗██╔╝      ██║██╔═══██╗
@@ -36,7 +37,8 @@ cat <<'BANNER'
 ██║  ██║███████╗██║ ╚████║██████╔╝██║  ██║██║██╔╝ ██╗      ██║╚██████╔╝
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝      ╚═╝ ╚═════╝
 BANNER
-printf "%s\n" "$(tput sgr0 2>/dev/null || true)"
+[ -t 1 ] && printf "%s" "$(tput sgr0 2>/dev/null || true)"
+echo ""
 
 info "Step 1: Determinate Nix"
 if in_cmd nix; then
@@ -64,8 +66,8 @@ if [ -z "$FLAKE_USER" ]; then
   exit 1
 elif [ "$FLAKE_USER" != "$REAL_USER" ]; then
   warn "flake.nix is configured for \"$FLAKE_USER\", but you are \"$REAL_USER\"."
-  read -r -p "Rewrite flake.nix's \"user = \" line to \"$REAL_USER\"? [y/N] " REPLY
-  if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
+  read -r -p "Rewrite flake.nix's \"user = \" line to \"$REAL_USER\"? [y/N] " REPLY || REPLY=""
+  if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ] || [ "$REPLY" = "yes" ]; then
     sed -i '' -E "s/^([[:space:]]*user = \")[^\"]+(\";.*)/\1${REAL_USER}\2/" flake.nix
     info "Updated. Review the change with: git diff flake.nix"
   else
@@ -109,12 +111,11 @@ warn "script, and on each later ./rebuild.sh), any brew package or app NOT"
 warn "listed in configuration.nix is uninstalled. \"none\": install what is"
 warn "listed, keep everything else. On a machine that already has Homebrew"
 warn "packages, choose n until the lists include everything you want to keep."
-read -r -p "Uninstall unlisted brew packages every time the config is applied? [y/N] " REPLY
-if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
-  TARGET="uninstall"
-else
-  TARGET="none"
-fi
+read -r -p "Uninstall unlisted brew packages every time the config is applied? [y/N] " REPLY || REPLY=""
+case "$REPLY" in
+  [yY]|[yY][eE][sS]) TARGET="uninstall" ;;
+  *) TARGET="none" ;;
+esac
 if [ "$TARGET" != "$CLEANUP" ]; then
   sed -i '' -E "s/^([[:space:]]*onActivation\.cleanup = \")[^\"]+(\";.*)/\1${TARGET}\2/" configuration.nix
   info "Updated to \"$TARGET\". Review the change with: git diff configuration.nix"
@@ -125,7 +126,7 @@ fi
 info "Step 6: choose whether to install the AI/agent tooling"
 # Settled before the first switch because the flag also gates nix-side
 # pieces (the herdr brew, the AGENTS.md links).
-AGENTS="$(sed -nE 's/^[[:space:]]*agents = (true|false);.*/\1/p' flake.nix | head -n1)"
+AGENTS="$(sed -nE 's/^[[:space:]]*agents[[:space:]]*=[[:space:]]*(true|false)[[:space:]]*;.*/\1/p' flake.nix | head -n1)"
 if [ -z "$AGENTS" ]; then
   err "Could not find the agents line in flake.nix."
   exit 1
@@ -133,20 +134,26 @@ fi
 warn "The agent fleet is Claude Code, firstmate, gnhf, no-mistakes, herdr,"
 warn "the third-party skills, and the AGENTS.md links for every AI harness."
 warn "Answer n for a plain development machine with none of it."
-read -r -p "Install the AI/agent tooling? [Y/n] " REPLY
-if [ "$REPLY" = "n" ] || [ "$REPLY" = "N" ]; then
-  TARGET="false"
-else
-  TARGET="true"
-fi
+read -r -p "Install the AI/agent tooling? [Y/n] " REPLY || REPLY=""
+case "$REPLY" in
+  [nN]|[nN][oO]|[nN][oO][pP][eE]) TARGET="false" ;;
+  *) TARGET="true" ;;
+esac
 if [ "$TARGET" != "$AGENTS" ]; then
-  sed -i '' -E "s/^([[:space:]]*agents = )(true|false)(;.*)/\1${TARGET}\3/" flake.nix
+  sed -i '' -E "s/^([[:space:]]*agents[[:space:]]*=[[:space:]]*)(true|false)([[:space:]]*;.*)/\1${TARGET}\3/" flake.nix
   info "Updated to ${TARGET}. Review the change with: git diff flake.nix"
 else
   info "Already ${TARGET}. Nothing to do."
 fi
 
 info "Step 7: first darwin-rebuild switch"
+# Migration aid for machines coming from the old layout, where the live
+# Claude settings were a symlink into this repo: the switch is about to
+# remove that link, so save the content first. sh/machine.sh adopts the
+# snapshot afterwards.
+if [ -L "$HOME/.claude/settings.json" ] && [ -e "$HOME/.claude/settings.json" ]; then
+  cp -L "$HOME/.claude/settings.json" "$HOME/.claude/settings.json.pre-migration"
+fi
 # darwin-rebuild doesn't exist yet on a fresh machine, so run it straight
 # from the nix-darwin flake this once. The system config it applies is still
 # pinned by this repo's flake.lock.
