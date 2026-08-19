@@ -40,7 +40,7 @@ cd ~/dotfiles
 2. Symlinks this repo to `~/.dotfiles` (home.nix resolves its file links through that path).
 3. Checks the `user` in `flake.nix` against your macOS username and offers to fix a mismatch.
 4. Checks `nixpkgs.hostPlatform` against your CPU (`uname -m`) and rewrites it if it's wrong - no question asked, uname knows better.
-5. Asks whether brew packages missing from the repo's lists should be uninstalled on every switch, and writes your answer into `configuration.nix` (see [Homebrew cleanup](#homebrew-cleanup)).
+5. Asks whether brew packages missing from the repo's lists should be uninstalled whenever the config is applied, and writes your answer into `configuration.nix` (see [Homebrew cleanup](#homebrew-cleanup)).
 6. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
 7. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain, Claude Code, and the agent tools, clones firstmate.
 
@@ -99,9 +99,9 @@ config. That part is manual, in this order:
 3. **Turn on cleanup once the lists are complete.** When
    `configuration.nix` lists everything you actually want, change
    `onActivation.cleanup` to `"uninstall"`. From then on, anything
-   installed with a plain `brew install` is removed again on the next
-   switch unless you add it to the list - that is what keeps the machine
-   matching the repo.
+   installed with a plain `brew install` is removed again the next time
+   you run `./rebuild.sh`, unless you add it to the list - that is what
+   keeps the machine matching the repo.
 
 ### Fork-and-run, step by step
 
@@ -239,7 +239,8 @@ The pieces fit together like this:
 
 `onActivation.cleanup` in `configuration.nix` decides what happens to brew
 packages that are NOT in the `brews`/`casks` lists. `"uninstall"` removes
-them on every switch, which keeps the machine matching the repo exactly -
+them every time the config is applied (bootstrap's first run, and each
+later `./rebuild.sh`), which keeps the machine matching the repo exactly -
 that's what my machine runs. `"none"` leaves them alone - the right answer
 for a machine with an existing Homebrew, until the lists cover everything
 you want to keep. Bootstrap asks which you want and writes the answer into

@@ -79,11 +79,12 @@ if [ -z "$CLEANUP" ]; then
   exit 1
 fi
 warn "Homebrew cleanup is currently \"$CLEANUP\"."
-warn "\"uninstall\" removes every brew formula and cask NOT declared in"
-warn "configuration.nix on every switch - apps included. \"none\" installs"
-warn "what is declared and keeps everything else. On a machine with an"
-warn "existing Homebrew, choose n until the lists reflect what you want."
-read -r -p "Uninstall undeclared brew packages on every switch? [y/N] " REPLY
+warn "\"uninstall\": every time this config is applied (at the end of this"
+warn "script, and on each later ./rebuild.sh), any brew package or app NOT"
+warn "listed in configuration.nix is uninstalled. \"none\": install what is"
+warn "listed, keep everything else. On a machine that already has Homebrew"
+warn "packages, choose n until the lists include everything you want to keep."
+read -r -p "Uninstall unlisted brew packages every time the config is applied? [y/N] " REPLY
 if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
   TARGET="uninstall"
 else
