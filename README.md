@@ -34,14 +34,15 @@ cd ~/dotfiles
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` does six things, in order:
+`bootstrap.sh` does seven things, in order:
 
 1. Installs Determinate Nix, if it isn't already installed.
 2. Symlinks this repo to `~/.dotfiles` (home.nix resolves its file links through that path).
 3. Checks the `user` in `flake.nix` against your macOS username and offers to fix a mismatch.
 4. Checks `nixpkgs.hostPlatform` against your CPU (`uname -m`) and rewrites it if it's wrong - no question asked, uname knows better.
-5. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
-6. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain, Claude Code, and the agent tools, clones firstmate.
+5. Asks whether brew packages missing from the repo's lists should be uninstalled on every switch, and writes your answer into `configuration.nix` (see [Homebrew cleanup](#homebrew-cleanup)).
+6. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
+7. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain, Claude Code, and the agent tools, clones firstmate.
 
 Auth is the only part that needs you at the keyboard. Everything else is unattended.
 
@@ -54,11 +55,12 @@ This repo is written so someone who isn't me can clone it and run
   and offers to rewrite it to your login. Say yes. That leaves a one-line
   local edit in your clone - fork the repo first if you ever want to push
   your own changes.
-- **Your existing apps and brew packages survive.** The aggressive
-  `cleanup = "uninstall"` convergence only applies to my username; for
-  everyone else Homebrew installs what's listed here and touches nothing
-  else. One caveat: casks install with `--force`, so if you already have
-  Ghostty installed manually, brew adopts (replaces) that copy.
+- **Your existing apps and brew packages survive.** Bootstrap asks
+  whether brew packages missing from this repo's lists should be
+  uninstalled; answer **n** (the default) and Homebrew installs what's
+  listed here and touches nothing else. One caveat: casks install with
+  `--force`, so if you already have Ghostty installed manually, brew
+  replaces that copy with its own.
 - **Your existing dotfiles are backed up, not deleted.** Files this repo
   manages (`~/.zshrc`, `~/.gitconfig`, `~/.config/nvim`, ...) are moved
   aside as `*.hm-backup` on the first switch. Anything you want to keep -
@@ -75,6 +77,31 @@ This repo is written so someone who isn't me can clone it and run
 - **Intel Macs work without edits.** Bootstrap detects the CPU and rewrites
   `nixpkgs.hostPlatform` itself. (OpenSuperWhisper won't install there;
   brew declines it on Intel - everything else is unaffected.)
+
+### Revamping an existing setup
+
+This repo started as a revamp of a machine with years of Homebrew and old
+dotfiles on it, not a fresh install. Bootstrap won't delete anything you
+have - but it also won't automatically add your existing setup to the
+config. That part is manual, in this order:
+
+1. **List what you already have installed.** `brew leaves` shows the
+   command-line packages you installed yourself; `brew list --cask` shows
+   your apps. Add the ones you want to keep to the `brews` and `casks`
+   lists in `configuration.nix`. Skipping this loses nothing - it just
+   means a future machine built from your fork wouldn't get those
+   packages.
+2. **Copy what you need out of your old dotfiles.** The first switch
+   renames your old files (`~/.zshrc` becomes `~/.zshrc.hm-backup`, and so
+   on). Copy the lines you still want: machine-specific ones into
+   `~/.zshrc.local`, ones you'd want on every machine into `home/.zshrc`
+   in your fork.
+3. **Turn on cleanup once the lists are complete.** When
+   `configuration.nix` lists everything you actually want, change
+   `onActivation.cleanup` to `"uninstall"`. From then on, anything
+   installed with a plain `brew install` is removed again on the next
+   switch unless you add it to the list - that is what keeps the machine
+   matching the repo.
 
 ### Fork-and-run, step by step
 
@@ -95,9 +122,10 @@ This repo is written so someone who isn't me can clone it and run
    SSH keys on your GitHub account, clone `git@github.com:YOUR-USERNAME/dotfiles.git`
    instead and pick SSH during `gh auth login`.
 
-   You're at the keyboard four times: your Mac password for sudo, **y** to
-   the username rewrite, the browser auth for `gh`, and optionally
-   skipping glab.
+   You're at the keyboard five times: your Mac password for sudo, **y** to
+   the username rewrite, **n** to the Homebrew cleanup question (unless
+   you've already filled the package lists with what you want kept), the
+   browser auth for `gh`, and optionally skipping glab.
 
 3. Restart the terminal, then claim your identity and salvage your old
    shell config:
@@ -209,14 +237,14 @@ The pieces fit together like this:
 
 ## Homebrew cleanup
 
-For user `aessex` only, `configuration.nix` sets
-`homebrew.onActivation.cleanup = "uninstall"`: any brew package not in its
-`brews`/`casks` lists is uninstalled on switch. The first switch removed
-brew's git, gh, starship, and stow - Nix provides git, gh, and starship from
-then on, and stow isn't needed anymore. It is deliberately not `"zap"`,
-which would also purge removed casks' app data. Every other user gets
-`"none"`, so an existing Homebrew keeps its packages (see the section
-above).
+`onActivation.cleanup` in `configuration.nix` decides what happens to brew
+packages that are NOT in the `brews`/`casks` lists. `"uninstall"` removes
+them on every switch, which keeps the machine matching the repo exactly -
+that's what my machine runs. `"none"` leaves them alone - the right answer
+for a machine with an existing Homebrew, until the lists cover everything
+you want to keep. Bootstrap asks which you want and writes the answer into
+the file; commit it to your fork like the username. It is deliberately
+never `"zap"`, which would also delete removed casks' app data.
 
 ## Structure
 

@@ -34,14 +34,14 @@
   };
   homebrew = {
     enable = true;
-    # "uninstall" removes brew packages that drop out of these lists - the
-    # right convergence for the machine this repo is the source of truth for.
-    # For anyone else adopting the repo on a Mac with an existing Homebrew,
-    # it would uninstall every formula and cask not listed here, apps
-    # included, so they get "none" and keep what they have.
-    # Not "zap" even here: that would additionally purge removed casks' app
-    # data.
-    onActivation.cleanup = if user == "aessex" then "uninstall" else "none";
+    # A per-machine choice, asked once by bootstrap.sh (which rewrites this
+    # line) and committed to your fork like the username and platform.
+    # "uninstall" converges: every brew formula and cask not declared here
+    # is removed on each switch - the end state once the lists reflect what
+    # you actually want. "none" adopts: install what's listed, keep
+    # everything an existing machine already has.
+    # Never "zap": that would additionally purge removed casks' app data.
+    onActivation.cleanup = "uninstall";
     onActivation.autoUpdate = true;
     onActivation.extraFlags = [ "--force" ];
     brews = [

@@ -70,7 +70,33 @@ else
   info "configuration.nix already matches $PLATFORM. Nothing to do."
 fi
 
-info "Step 5: first darwin-rebuild switch"
+info "Step 5: choose Homebrew cleanup behavior"
+# The one genuinely destructive setting, so it is an explicit choice, not a
+# default. It has to be settled before the first switch runs brew.
+CLEANUP="$(sed -nE 's/^[[:space:]]*onActivation\.cleanup = "([^"]+)";.*/\1/p' configuration.nix | head -n1)"
+if [ -z "$CLEANUP" ]; then
+  err "Could not find the onActivation.cleanup line in configuration.nix."
+  exit 1
+fi
+warn "Homebrew cleanup is currently \"$CLEANUP\"."
+warn "\"uninstall\" removes every brew formula and cask NOT declared in"
+warn "configuration.nix on every switch - apps included. \"none\" installs"
+warn "what is declared and keeps everything else. On a machine with an"
+warn "existing Homebrew, choose n until the lists reflect what you want."
+read -r -p "Uninstall undeclared brew packages on every switch? [y/N] " REPLY
+if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
+  TARGET="uninstall"
+else
+  TARGET="none"
+fi
+if [ "$TARGET" != "$CLEANUP" ]; then
+  sed -i '' -E "s/^([[:space:]]*onActivation\.cleanup = \")[^\"]+(\";.*)/\1${TARGET}\2/" configuration.nix
+  info "Updated to \"$TARGET\". Review the change with: git diff configuration.nix"
+else
+  info "Already \"$TARGET\". Nothing to do."
+fi
+
+info "Step 6: first darwin-rebuild switch"
 # darwin-rebuild doesn't exist yet on a fresh machine, so run it straight
 # from the nix-darwin flake this once. The system config it applies is still
 # pinned by this repo's flake.lock.
@@ -85,7 +111,7 @@ sudo "$NIX_BIN" run github:nix-darwin/nix-darwin/nix-darwin-26.05#darwin-rebuild
 # If this fails with "nix: command not found", open a new terminal
 # (Determinate adds nix to new shells' PATH) and re-run ./bootstrap.sh.
 
-info "Step 6: imperative layer (auth, node toolchain, firstmate)"
+info "Step 7: imperative layer (auth, node toolchain, firstmate)"
 INTERACTIVE=1 run_imperative
 
 success "Done. Use ./rebuild.sh for future changes."
