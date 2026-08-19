@@ -23,6 +23,9 @@ see [Credits](#credits).
   not the brew cask, which would be a second, competing install)
 - **Codex** - OpenAI's terminal agent, npm global; inert until you log in
   (an existing ChatGPT account works)
+- **Cursor CLI** - Cursor's terminal agent (`cursor-agent`), via its official
+  installer; inert until you sign in. The Cursor *editor* stays a personal
+  casks-list choice
 - **[gnhf](https://github.com/kunchenguid/gnhf)** - overnight agent loop orchestrator, npm global, kept alive across node upgrades via nvm's `default-packages`
 - **[no-mistakes](https://github.com/kunchenguid/no-mistakes)** - local validation gate, aliased to `gate`
 - **[lavish](https://github.com/kunchenguid/lavish-axi)** - review agent-generated HTML in a browser; skill installed at user level

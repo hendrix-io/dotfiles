@@ -91,6 +91,22 @@ clone_firstmate() {
     warn "firstmate clone failed"
 }
 
+# Cursor's terminal agent, via its official installer. It never edits rc
+# files - it only prints PATH advice when ~/.local/bin isn't on PATH, and
+# the pre-seeded PATH avoids even that. Versions live under
+# ~/.local/share/cursor-agent with a symlink in ~/.local/bin; inert until
+# you sign in with a Cursor account.
+install_cursor_cli() {
+  if in_cmd "cursor-agent" || [ -x "$HOME/.local/bin/cursor-agent" ]; then
+    info "cursor-agent is already installed. Skipping."
+    return 0
+  fi
+  info "Installing Cursor CLI..."
+  mkdir -p "$HOME/.local/bin"
+  curl -fsS https://cursor.com/install | PATH="$HOME/.local/bin:$PATH" bash ||
+    warn "Cursor CLI failed to install"
+}
+
 # Codex, OpenAI's terminal agent. The fleet is deliberately harness-agnostic:
 # skills already install for Codex and ~/.codex/AGENTS.md is already linked,
 # so the CLI itself rides along. Inert until `codex` logs in - an existing
@@ -135,6 +151,7 @@ remove_agent_default_packages() {
 run_agent_installs() {
   install_claude
   install_codex
+  install_cursor_cli
   install_gnhf
   install_no_mistakes
   clone_firstmate
