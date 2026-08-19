@@ -19,6 +19,8 @@ see [Credits](#credits).
 **Imperative (guarded installers, same scripts re-run safely)**
 
 - **Node toolchain** - nvm with `.nvmrc` auto-switching, node LTS, pnpm, bun
+- **Claude Code** - via its native installer into `~/.local/bin` (deliberately
+  not the brew cask, which would be a second, competing install)
 - **[gnhf](https://github.com/kunchenguid/gnhf)** - overnight agent loop orchestrator, npm global, kept alive across node upgrades via nvm's `default-packages`
 - **[no-mistakes](https://github.com/kunchenguid/no-mistakes)** - local validation gate, aliased to `gate`
 - **[lavish](https://github.com/kunchenguid/lavish-axi)** - review agent-generated HTML in a browser; skill installed at user level
@@ -38,9 +40,40 @@ cd ~/dotfiles
 2. Symlinks this repo to `~/.dotfiles` (home.nix resolves its file links through that path).
 3. Checks the `user` in `flake.nix` against your macOS username and offers to fix a mismatch.
 4. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
-5. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain and agent tools, clones firstmate.
+5. Runs the imperative layer: prompts `gh auth login` (and optionally `glab`), installs the node toolchain, Claude Code, and the agent tools, clones firstmate.
 
 Auth is the only part that needs you at the keyboard. Everything else is unattended.
+
+## Not your machine? Not a fresh Mac? Still fine
+
+This repo is written so someone who isn't me can clone it and run
+`./bootstrap.sh` on a Mac that already has stuff on it. What to expect:
+
+- **Your username**: step 3 of bootstrap notices `flake.nix` says `aessex`
+  and offers to rewrite it to your login. Say yes. That leaves a one-line
+  local edit in your clone - fork the repo first if you ever want to push
+  your own changes.
+- **Your existing apps and brew packages survive.** The aggressive
+  `cleanup = "uninstall"` convergence only applies to my username; for
+  everyone else Homebrew installs what's listed here and touches nothing
+  else. One caveat: casks install with `--force`, so if you already have
+  Ghostty installed manually, brew adopts (replaces) that copy.
+- **Your existing dotfiles are backed up, not deleted.** Files this repo
+  manages (`~/.zshrc`, `~/.gitconfig`, `~/.config/nvim`, ...) are moved
+  aside as `*.hm-backup` on the first switch. Anything you want to keep -
+  PATH entries, aliases, secrets - goes into `~/.zshrc.local`, which is
+  sourced last and overrides everything.
+- **Tools you already have are left alone.** Every imperative installer is
+  guarded: existing nvm, node, pnpm, bun, or Claude Code installs are
+  detected and skipped.
+- **macOS defaults ARE applied** - dark mode, dock autohide, fast key
+  repeat, tap to click. Edit `system.defaults` in `configuration.nix`
+  before bootstrapping if you feel strongly.
+- **Your git identity is yours.** Bootstrap creates `~/.gitconfig.local`
+  from the example; put your name and email there. It is never committed.
+- **Intel Macs**: change `nixpkgs.hostPlatform` in `configuration.nix` to
+  `x86_64-darwin` first (OpenSuperWhisper won't install there; brew
+  declines it on Intel).
 
 ### Validate without applying
 
@@ -89,14 +122,17 @@ overrides for different jobs, so none of that is visible in this public repo.
 
 ## Agent instructions
 
-`AGENTS.md` at the repo root is linked by home-manager to all three of:
+`AGENTS.md` at the repo root is linked by home-manager to all four of:
 
-- `~/.claude/CLAUDE.md`
-- `~/.codex/AGENTS.md`
-- `~/.config/opencode/AGENTS.md`
+- `~/.claude/CLAUDE.md` (Claude Code)
+- `~/.codex/AGENTS.md` (Codex CLI)
+- `~/.config/opencode/AGENTS.md` (OpenCode)
+- `~/.cursor/AGENTS.md` (Cursor)
 
 Edit the one file, every agent picks it up. Project-level `AGENTS.md` files
-still override it.
+still override it. Codex and Cursor aren't installed by this repo - but if
+you use them, their global instructions are already wired the moment they
+are (`npm i -g @openai/codex`, `brew install --cask cursor`).
 
 `~/.claude/settings.json` IS managed here. This is a personal machine, so the
 file holds nothing but personal preferences; on a work machine that mixes in
@@ -122,11 +158,14 @@ The pieces fit together like this:
 
 ## Homebrew cleanup
 
-`configuration.nix` sets `homebrew.onActivation.cleanup = "uninstall"`: any
-brew package not in its `brews`/`casks` lists is uninstalled on switch. The
-first switch will remove brew's git, gh, starship, and stow - Nix provides
-git, gh, and starship from then on, and stow isn't needed anymore. It is
-deliberately not `"zap"`, which would also purge removed casks' app data.
+For user `aessex` only, `configuration.nix` sets
+`homebrew.onActivation.cleanup = "uninstall"`: any brew package not in its
+`brews`/`casks` lists is uninstalled on switch. The first switch removed
+brew's git, gh, starship, and stow - Nix provides git, gh, and starship from
+then on, and stow isn't needed anymore. It is deliberately not `"zap"`,
+which would also purge removed casks' app data. Every other user gets
+`"none"`, so an existing Homebrew keeps its packages (see the section
+above).
 
 ## Structure
 

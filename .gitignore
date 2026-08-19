@@ -2,5 +2,11 @@
 .zshrc.local
 .gitconfig.local
 
+# The whole herdr config dir is symlinked into ~/.config, so herdr writes its
+# runtime state (session, logs, plugin checkouts) straight into this repo.
+# Only config.toml is ours.
+home/.config/herdr/*
+!home/.config/herdr/config.toml
+
 # Nix build output
 result

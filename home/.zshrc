@@ -146,18 +146,3 @@ command -v starship >/dev/null && eval "$(starship init zsh)"
 if [ -f "$HOME/.zshrc.local" ]; then
   . "$HOME/.zshrc.local"
 fi
-
-# pnpm
-export PNPM_HOME="/Users/aessex/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
-
-# bun completions
-[ -s "/Users/aessex/.bun/_bun" ] && source "/Users/aessex/.bun/_bun"
-
-# bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"

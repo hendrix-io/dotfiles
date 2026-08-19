@@ -64,12 +64,15 @@ auth_gitlab() {
   fi
 }
 
+# nvm's installer wants to append its source lines to ~/.zshrc, but skips any
+# rc file that already mentions nvm.sh - ours does, so the symlinked repo
+# file stays untouched.
 install_nvm() {
   if [ -d "$HOME/.nvm" ]; then
     info "nvm is already installed. Skipping."
   else
     info "Installing nvm..."
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.7/install.sh | bash
     success "nvm installed"
   fi
 }
@@ -80,10 +83,13 @@ setup_default_packages() {
   local f="${NVM_DIR:-$HOME/.nvm}/default-packages"
   mkdir -p "$(dirname "$f")"
   touch "$f"
-  if ! grep -qx "gnhf" "$f"; then
-    info "Adding gnhf to nvm default-packages..."
-    echo "gnhf" >> "$f"
-  fi
+  local pkg
+  for pkg in gnhf pnpm; do
+    if ! grep -qx "$pkg" "$f"; then
+      info "Adding $pkg to nvm default-packages..."
+      echo "$pkg" >> "$f"
+    fi
+  done
 }
 
 # Node itself plus the npm/npx-dependent tools, in one subshell: nvm.sh is
@@ -109,6 +115,16 @@ install_node_layer() {
       npm install -g gnhf || warn "gnhf failed to install"
     fi
 
+    # pnpm, via npm rather than get.pnpm.io: the standalone installer ends
+    # with `pnpm setup --force`, which unconditionally writes a PNPM_HOME
+    # block into ~/.zshrc - a symlink into this repo. npm keeps it out of
+    # the rc entirely; default-packages keeps it across node upgrades, and
+    # .zshrc already puts PNPM_HOME on PATH.
+    if ! command -v pnpm > /dev/null 2>&1; then
+      info "Installing pnpm..."
+      npm install -g pnpm || warn "pnpm failed to install"
+    fi
+
     # lavish: review agent-generated HTML in a browser. The CLI is
     # install-free (`npx -y lavish-axi`); only the skill gets installed, at
     # user level (-g) so it follows you across repos.
@@ -120,24 +136,34 @@ install_node_layer() {
   ) || warn "node layer had errors - re-run ./rebuild.sh"
 }
 
-install_pnpm() {
-  if in_cmd "pnpm"; then
-    info "pnpm is already installed. Skipping."
-  else
-    info "Installing pnpm..."
-    curl -fsSL https://get.pnpm.io/install.sh | sh -
-    success "pnpm installed"
-  fi
-}
-
+# bun's installer edits ~/.zshrc only when `bun` doesn't resolve in its own
+# shell after the install - so pre-seeding PATH with the install target makes
+# that check succeed and the rc edit (into this repo, via the symlink) never
+# happens. .zshrc already has the equivalent guarded block.
 install_bun() {
   if in_cmd "bun"; then
     info "bun is already installed. Skipping."
   else
     info "Installing bun..."
-    curl -fsSL https://bun.sh/install | bash
+    curl -fsSL https://bun.sh/install | PATH="$HOME/.bun/bin:$PATH" bash
     success "bun installed"
   fi
+}
+
+# Claude Code, via its native installer - the brew cask is deliberately
+# absent from configuration.nix because it would be a second, competing
+# install. Lands in ~/.local/bin, which .zshrc already puts on PATH;
+# pre-seeding PATH the same way keeps the installer from offering to edit
+# the rc when it runs before a shell restart.
+install_claude() {
+  if in_cmd "claude" || [ -x "$HOME/.local/bin/claude" ]; then
+    info "claude is already installed. Skipping."
+    return 0
+  fi
+  info "Installing Claude Code..."
+  mkdir -p "$HOME/.local/bin"
+  curl -fsSL https://claude.ai/install.sh | PATH="$HOME/.local/bin:$PATH" bash ||
+    warn "Claude Code failed to install"
 }
 
 # no-mistakes: local validation gate in front of the real remote.
@@ -210,8 +236,8 @@ run_imperative() {
   install_nvm
   setup_default_packages
   install_node_layer
-  install_pnpm
   install_bun
+  install_claude
   install_no_mistakes
   setup_gitconfig_local
   setup_zshrc_local
