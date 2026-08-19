@@ -107,35 +107,26 @@ install_cursor_cli() {
     warn "Cursor CLI failed to install"
 }
 
-# Codex, OpenAI's terminal agent. The fleet is deliberately harness-agnostic:
-# skills already install for Codex and ~/.codex/AGENTS.md is already linked,
-# so the CLI itself rides along. Inert until `codex` logs in - an existing
-# ChatGPT account works, no separate billing.
+# Codex, OpenAI's terminal agent, via its official installer - it adds a
+# PATH block to the shell rc only when ~/.local/bin isn't already on PATH,
+# so the pre-seeded PATH prevents the rc edit (same trick as claude and
+# cursor-agent). Inert until `codex` logs in; an existing ChatGPT account
+# works, no separate billing.
 install_codex() {
-  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-  if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-    warn "nvm is not installed. Skipping codex."
+  if in_cmd "codex" || [ -x "$HOME/.local/bin/codex" ]; then
+    info "codex is already installed. Skipping."
     return 0
   fi
-  local f="$NVM_DIR/default-packages"
-  touch "$f"
-  if ! grep -qx "@openai/codex" "$f"; then
-    info "Adding @openai/codex to nvm default-packages..."
-    echo "@openai/codex" >> "$f"
-  fi
-  (
-    set +eu
-    . "$NVM_DIR/nvm.sh"
-    if ! command -v codex > /dev/null 2>&1; then
-      info "Installing Codex..."
-      npm install -g @openai/codex || warn "codex failed to install"
-    fi
-  ) || warn "codex install had errors - re-run ./rebuild.sh"
+  info "Installing Codex..."
+  mkdir -p "$HOME/.local/bin"
+  curl -fsSL https://chatgpt.com/codex/install.sh | PATH="$HOME/.local/bin:$PATH" sh ||
+    warn "Codex failed to install"
 }
 
 # The flip-off counterpart to the installers above: without this, stale
 # entries in default-packages reinstall agent CLIs on every node upgrade
-# of a machine that turned the fleet off.
+# of a machine that turned the fleet off. @openai/codex is legacy cleanup
+# from when codex was npm-installed; it is never added anymore.
 remove_agent_default_packages() {
   local f="${NVM_DIR:-$HOME/.nvm}/default-packages"
   [ -f "$f" ] || return 0

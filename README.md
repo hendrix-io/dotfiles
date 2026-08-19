@@ -21,8 +21,8 @@ see [Credits](#credits).
 - **Node toolchain** - nvm with `.nvmrc` auto-switching, node LTS, pnpm, bun
 - **Claude Code** - via its native installer into `~/.local/bin` (deliberately
   not the brew cask, which would be a second, competing install)
-- **Codex** - OpenAI's terminal agent, npm global; inert until you log in
-  (an existing ChatGPT account works)
+- **Codex** - OpenAI's terminal agent, via its official installer; inert
+  until you log in (an existing ChatGPT account works)
 - **Cursor CLI** - Cursor's terminal agent (`cursor-agent`), via its official
   installer; inert until you sign in. The Cursor *editor* stays a personal
   casks-list choice
