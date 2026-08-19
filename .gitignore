@@ -2,6 +2,14 @@
 .zshrc.local
 .gitconfig.local
 
+# The live Claude settings are machine state written by Claude Code itself;
+# only settings.template.json is committed. This entry keeps the live file
+# from ever being re-added here by accident.
+home/.claude/settings.json
+
+# Lavish review artifacts
+.lavish/
+
 # The whole herdr config dir is symlinked into ~/.config, so herdr writes its
 # runtime state (session, logs, plugin checkouts) straight into this repo.
 # Only config.toml is ours.

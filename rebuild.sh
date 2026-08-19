@@ -15,12 +15,31 @@ export DOTFILES_DIR="$DIR"
 . sh/utils.sh
 . sh/installs.sh
 
+if [ "${1:-}" = "--help" ]; then
+  echo ""
+  echo "rebuild.sh - re-apply the config after a change. Never prompts."
+  echo ""
+  echo "Run after editing a package list, a macOS default, or the set of"
+  echo "linked files. Editing an already-linked file needs no rebuild - the"
+  echo "symlinks point into this repo, so those edits are live immediately."
+  echo ""
+  exit 0
+fi
+
 if ! in_cmd darwin-rebuild; then
   err "darwin-rebuild not found. Run ./bootstrap.sh first."
   exit 1
 fi
 
 ln -sfn "$DIR" ~/.dotfiles
+
+# Migration aid for machines coming from the old layout, where the live
+# Claude settings were a symlink into this repo: the switch is about to
+# remove that link, so save the content first. sh/machine.sh adopts the
+# snapshot afterwards.
+if [ -L "$HOME/.claude/settings.json" ] && [ -e "$HOME/.claude/settings.json" ]; then
+  cp -L "$HOME/.claude/settings.json" "$HOME/.claude/settings.json.pre-migration"
+fi
 
 info "Applying the declarative config..."
 sudo darwin-rebuild switch --flake ~/.dotfiles#mac
