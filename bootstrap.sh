@@ -162,6 +162,11 @@ else
 fi
 
 info "Step 7: first darwin-rebuild switch"
+# On a Mac that had Homebrew before, brew's Ruby startup cache (bootsnap)
+# was built by the old brew version; the nix-pinned brew reads it and dies
+# with "rb_file_s_lstat - .../bootsnap/...". It is only a cache - clear it
+# so the migrated brew starts clean.
+rm -rf "$HOME/Library/Caches/Homebrew/bootsnap"
 # Migration aid for machines coming from the old layout, where the live
 # Claude settings were a symlink into this repo: the switch is about to
 # remove that link, so save the content first. sh/machine.sh adopts the
