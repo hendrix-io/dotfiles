@@ -20,7 +20,7 @@
     let
       # The one username line to change on a machine with a different login.
       # bootstrap.sh detects a mismatch and offers to rewrite this for you.
-      user = "aessex";
+      user = "andrew";
       # Install the AI/agent tooling? bootstrap.sh asks once and rewrites
       # this line. false skips the agent fleet and skills (sh/ layer), drops
       # herdr from the brew list (configuration.nix), and gates the AGENTS.md
