@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # The base developer toolchain - useful with or without the agent fleet.
-# Every function is guarded, so re-running is cheap and safe.
+# Every function is guarded or idempotent, so re-running is cheap and safe.
 
 . sh/utils.sh
 
@@ -56,10 +56,8 @@ install_node_layer() {
     # block into ~/.zshrc - a symlink into this repo. npm keeps it out of
     # the rc entirely; default-packages keeps it across node upgrades, and
     # .zshrc already puts PNPM_HOME on PATH.
-    if ! command -v pnpm > /dev/null 2>&1; then
-      info "Installing pnpm..."
-      npm install -g pnpm || warn "pnpm failed to install"
-    fi
+    info "Installing pnpm..."
+    npm install -g --force pnpm || warn "pnpm failed to install"
 
     # openspec: the daily spec-workflow CLI. npm global (not bun) so it
     # rides default-packages across node upgrades like pnpm does.
