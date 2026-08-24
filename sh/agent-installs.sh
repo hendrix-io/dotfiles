@@ -107,6 +107,68 @@ install_cursor_cli() {
     warn "Cursor CLI failed to install"
 }
 
+# Pi, via its official installer in managed mode (PI_EXPERIMENTAL=1). The
+# installer's default mode is a plain `npm install -g`, which lands pi
+# inside the active nvm node version's bin - cd into a repo whose .nvmrc
+# picks a different version and the command vanishes (the pnpm lesson
+# again). Managed mode instead keeps releases under ~/.pi/agent/install
+# behind a version-independent launcher, and symlinks it into ~/.local/bin
+# because the pre-seeded PATH lists that dir. Updates via `pi update`.
+#
+# The installer's confirm menu reads /dev/tty directly and would block a
+# rebuild, so the run is detached from the controlling terminal (fork +
+# setsid via python3, which ships with the CLT this setup already needs);
+# that flips the installer onto its documented non-interactive path, which
+# defaults to "install" and skips every rc-edit offer. Runtime notes: pi
+# runs on whatever node is active, and wants >=22.19 - repos pinning an
+# older major run pi on that older node.
+install_pi() {
+  if in_cmd "pi" || [ -x "$HOME/.local/bin/pi" ]; then
+    info "pi is already installed. Skipping."
+    return 0
+  fi
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+    warn "nvm is not installed. Skipping pi."
+    return 0
+  fi
+  info "Installing Pi..."
+  mkdir -p "$HOME/.local/bin"
+  (
+    set +eu
+    . "$NVM_DIR/nvm.sh"
+    installer="$(mktemp)" || exit 1
+    trap 'rm -f "$installer"' EXIT
+    curl -fsSL https://pi.dev/install.sh -o "$installer" || exit 1
+    PI_EXPERIMENTAL=1 PATH="$HOME/.local/bin:$PATH" python3 - "$installer" <<'PY'
+import os, sys
+
+pid = os.fork()
+if pid:
+    _, status = os.waitpid(pid, 0)
+    sys.exit(os.waitstatus_to_exitcode(status))
+os.setsid()
+os.execv("/bin/sh", ["sh", sys.argv[1]])
+PY
+  ) || warn "Pi failed to install"
+}
+
+# Pi settings are machine-owned for the same reason Claude's are (see
+# home.nix): pi rewrites the file at runtime, and a symlink would land
+# those writes in this public repo. Seeded once from the template, then
+# the machine owns it. Deliberately not seeded: defaultProvider,
+# defaultModel, and ~/.pi/agent/auth.json - they encode work-specific
+# LiteLLM details (base URL, token) that stay out of a public repo.
+seed_pi_settings() {
+  local live="$HOME/.pi/agent/settings.json"
+  if [ -f "$live" ]; then
+    return 0
+  fi
+  info "Seeding ~/.pi/agent/settings.json from the template..."
+  mkdir -p "$HOME/.pi/agent"
+  cp "$DOTFILES_DIR/home/.pi/agent/settings.template.json" "$live"
+}
+
 # Codex, OpenAI's terminal agent, via its official installer - it adds a
 # PATH block to the shell rc only when ~/.local/bin isn't already on PATH,
 # so the pre-seeded PATH prevents the rc edit (same trick as claude and
@@ -143,6 +205,8 @@ run_agent_installs() {
   install_claude
   install_codex
   install_cursor_cli
+  install_pi
+  seed_pi_settings
   install_gnhf
   install_no_mistakes
   clone_firstmate

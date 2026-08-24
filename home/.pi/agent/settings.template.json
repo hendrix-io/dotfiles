@@ -1,0 +1,13 @@
+{
+  "enableInstallTelemetry": false,
+  "theme": "dark",
+  "packages": [
+    "npm:pi-provider-litellm",
+    "npm:@tintinweb/pi-tasks",
+    "npm:@tintinweb/pi-subagents",
+    "npm:@m4ss/pi-web-fetch",
+    "npm:@m4ss/pi-llms-txt",
+    "npm:@firstpick/pi-extension-tools"
+  ],
+  "defaultThinkingLevel": "high"
+}
