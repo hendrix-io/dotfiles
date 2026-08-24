@@ -57,11 +57,7 @@
     casks = [
       "ghostty"
       "font-hack-nerd-font"
-      # Local dictation. arm64 + macOS >= 14 only; brew declines it on Intel.
       "opensuperwhisper"
-      # Deliberately absent: claude-code. Claude Code is installed via its
-      # native installer (~/.local/bin/claude) and updates itself; the cask
-      # would be a second, competing install.
     ];
   };
 }
