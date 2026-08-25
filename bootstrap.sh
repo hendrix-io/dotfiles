@@ -98,7 +98,16 @@ if [ "$CLEANUP" = "uninstall" ]; then
 else
   warn "Switches install what is listed and keep everything else."
 fi
-if [ "$(ask_yn "Proceed with this configuration? [Y/n] " y)" = "n" ]; then
+# First bootstrap of a Mac with converge mode committed: default the
+# go-ahead to No, so an outsider's existing brews are never one reflexive
+# Enter away from deletion. A machine that has switched before (rebuild
+# exists) keeps the fast default.
+if [ "$CLEANUP" = "uninstall" ] && ! in_cmd darwin-rebuild; then
+  GO_DEFAULT="n"; GO_HINT="[y/N]"
+else
+  GO_DEFAULT="y"; GO_HINT="[Y/n]"
+fi
+if [ "$(ask_yn "Proceed with this configuration? $GO_HINT " "$GO_DEFAULT")" = "n" ]; then
   err "Edit flake.nix, then re-run."
   exit 1
 fi
