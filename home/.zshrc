@@ -27,6 +27,17 @@ if [ -n "$HOMEBREW_PREFIX" ]; then
   path=("$HOMEBREW_PREFIX/bin" "$HOMEBREW_PREFIX/sbin" $path)
 fi
 
+# Ensure the Nix profile bin dirs are on PATH. /etc/zshenv normally adds
+# them, but skips that when __NIX_DARWIN_SET_ENVIRONMENT_DONE is inherited
+# from a parent process whose PATH was rebuilt without them (e.g. herdr
+# panes). Duplicates are removed by `typeset -U` above. Least-specific dir
+# first, so the per-user profile ends up with the highest precedence.
+for _p in /nix/var/nix/profiles/default/bin /run/current-system/sw/bin \
+          "/etc/profiles/per-user/$USER/bin" "$HOME/.nix-profile/bin"; do
+  [ -d "$_p" ] && path=("$_p" $path)
+done
+unset _p
+
 # ---------------------------------------------------------------------------
 # completions
 # ---------------------------------------------------------------------------
