@@ -55,11 +55,9 @@ ask_yn() {
 # Machine identity
 # ---------------------------------------------------------------------------
 
-# Which entry in flake.nix's `machines` map this Mac uses. The label lives
-# in ~/.dotfiles-machine - one untracked line, the only per-machine state
-# outside the repo. When the file is missing, derive the label by matching
-# the login against the machines entries and write it, so a fresh checkout
-# works on both bootstrap and rebuild with no manual step.
+# Print this Mac's label in flake.nix's `machines` map. Reads
+# ~/.dotfiles-machine (untracked); when the file is missing, derives the
+# label from the login and writes it.
 machine_label() {
   local f="$HOME/.dotfiles-machine" label
   if [ -f "$f" ]; then
@@ -74,8 +72,8 @@ machine_label() {
   printf '%s' "$label"
 }
 
-# Match a login against the machines map in flake.nix. Prints the label;
-# fails when the login matches no machine or (defensively) more than one.
+# Print the machines-map label whose login matches $1. Fails on zero or
+# multiple matches.
 derive_machine_label() {
   awk -v login="$1" '
     /^[[:space:]]*machines[[:space:]]*=[[:space:]]*\{[[:space:]]*$/ { inm = 1; next }

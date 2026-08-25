@@ -107,21 +107,16 @@ install_cursor_cli() {
     warn "Cursor CLI failed to install"
 }
 
-# Pi, via its official installer in managed mode (PI_EXPERIMENTAL=1). The
-# installer's default mode is a plain `npm install -g`, which lands pi
-# inside the active nvm node version's bin - cd into a repo whose .nvmrc
-# picks a different version and the command vanishes (the pnpm lesson
-# again). Managed mode instead keeps releases under ~/.pi/agent/install
-# behind a version-independent launcher, and symlinks it into ~/.local/bin
-# because the pre-seeded PATH lists that dir. Updates via `pi update`.
+# Pi, via its official installer in managed mode (PI_EXPERIMENTAL=1):
+# releases live under ~/.pi/agent/install with a launcher symlinked into
+# ~/.local/bin, so pi still resolves when nvm switches node versions.
+# (The installer's default mode is `npm install -g` into the active node
+# version's bin, which does not.) Update with `pi update`.
 #
-# The installer's confirm menu reads /dev/tty directly and would block a
-# rebuild, so the run is detached from the controlling terminal (fork +
-# setsid via python3, which ships with the CLT this setup already needs);
-# that flips the installer onto its documented non-interactive path, which
-# defaults to "install" and skips every rc-edit offer. Runtime notes: pi
-# runs on whatever node is active, and wants >=22.19 - repos pinning an
-# older major run pi on that older node.
+# The installer's confirm menu reads /dev/tty and would block a rebuild,
+# so it runs detached from the terminal (fork + setsid via python3); the
+# no-tty path installs without asking and never edits rc files. Needs
+# node >=22.19 and npm at install and run time, hence the nvm subshell.
 install_pi() {
   if in_cmd "pi" || [ -x "$HOME/.local/bin/pi" ]; then
     info "pi is already installed. Skipping."
@@ -153,12 +148,11 @@ PY
   ) || warn "Pi failed to install"
 }
 
-# Pi settings are machine-owned for the same reason Claude's are (see
-# home.nix): pi rewrites the file at runtime, and a symlink would land
-# those writes in this public repo. Seeded once from the template, then
-# the machine owns it. Deliberately not seeded: defaultProvider,
-# defaultModel, and ~/.pi/agent/auth.json - they encode work-specific
-# LiteLLM details (base URL, token) that stay out of a public repo.
+# Seed ~/.pi/agent/settings.json from the template once; after that the
+# machine owns it. Not a symlink: pi rewrites the file at runtime, and a
+# symlink would land those writes in this public repo (same reasoning as
+# Claude's settings, see home.nix). defaultProvider, defaultModel, and
+# auth.json are never seeded - they hold work-specific LiteLLM values.
 seed_pi_settings() {
   local live="$HOME/.pi/agent/settings.json"
   if [ -f "$live" ]; then

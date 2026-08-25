@@ -56,9 +56,8 @@ info "Step 2: symlink this repo to ~/.dotfiles"
 ln -sfn "$DIR" ~/.dotfiles
 
 info "Step 3: machine identity"
-# Which block in flake.nix's `machines` this Mac uses. Matched by login
-# when ~/.dotfiles-machine doesn't exist yet; the label is machine-local
-# state, so nothing in the repo is ever rewritten per machine.
+# Resolve which machines-map entry this Mac uses: reads
+# ~/.dotfiles-machine, or matches the login and writes it.
 if ! MACHINE="$(machine_label)"; then
   err "Login \"$(whoami)\" matches no machine in flake.nix's machines block."
   err "Add an entry for this Mac to the machines map (label = \"login\";),"
@@ -98,10 +97,9 @@ if [ "$CLEANUP" = "uninstall" ]; then
 else
   warn "Switches install what is listed and keep everything else."
 fi
-# First bootstrap of a Mac with converge mode committed: default the
-# go-ahead to No, so an outsider's existing brews are never one reflexive
-# Enter away from deletion. A machine that has switched before (rebuild
-# exists) keeps the fast default.
+# Default the go-ahead to No on a first bootstrap when cleanup is
+# "uninstall": pressing Enter must not delete existing brew packages.
+# Machines that have switched before default to Yes.
 if [ "$CLEANUP" = "uninstall" ] && ! in_cmd darwin-rebuild; then
   GO_DEFAULT="n"; GO_HINT="[y/N]"
 else

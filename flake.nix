@@ -18,22 +18,18 @@
 
   outputs = inputs@{ self, nix-darwin, nix-homebrew, home-manager, nixpkgs, treehouse }:
     let
-      # Which login each Mac uses - the one value that must be committed
-      # per machine, because flakes evaluate purely from the repo: there is
-      # no "ask who is logged in" at eval time, and a locally-rewritten
-      # username is either committed (breaking the other machine on pull)
-      # or a permanently dirty tree. Each Mac picks its entry via the
-      # one-line label in ~/.dotfiles-machine; when that file is missing,
-      # the sh/ layer derives it by matching the login against these
-      # entries. bootstrap.sh and sh/utils.sh parse this file with awk/sed
-      # - keep the one-line `label = "login";` formatting when editing.
+      # Each machine's login. A Mac selects its entry by the label in
+      # ~/.dotfiles-machine; when that file is missing, the sh/ layer
+      # matches `whoami` against these entries and writes it. Parsed by
+      # bootstrap.sh and sh/utils.sh - keep the one-line
+      # `label = "login";` format.
       machines = {
         work = "andrew";
         personal = "aessex";
       };
 
-      # Shared by every machine - the point of the dotfiles. Promote one of
-      # these into per-machine data only when two Macs genuinely differ.
+      # Shared by every machine. Move a value into `machines` only when
+      # two Macs need to differ.
       platform = "aarch64-darwin";
       # Install the AI/agent tooling? false skips the agent fleet and
       # skills (sh/ layer), drops herdr from the brew list
