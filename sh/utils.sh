@@ -51,6 +51,48 @@ ask_yn() {
   done
 }
 
+# ---------------------------------------------------------------------------
+# Machine identity
+# ---------------------------------------------------------------------------
+
+# Which entry in flake.nix's `machines` map this Mac uses. The label lives
+# in ~/.dotfiles-machine - one untracked line, the only per-machine state
+# outside the repo. When the file is missing, derive the label by matching
+# the login against the machines entries and write it, so a fresh checkout
+# works on both bootstrap and rebuild with no manual step.
+machine_label() {
+  local f="$HOME/.dotfiles-machine" label
+  if [ -f "$f" ]; then
+    label="$(tr -d '[:space:]' < "$f")"
+    if [ -n "$label" ]; then
+      printf '%s' "$label"
+      return 0
+    fi
+  fi
+  label="$(derive_machine_label "$(whoami)")" || return 1
+  printf '%s\n' "$label" > "$f"
+  printf '%s' "$label"
+}
+
+# Match a login against the machines map in flake.nix. Prints the label;
+# fails when the login matches no machine or (defensively) more than one.
+derive_machine_label() {
+  awk -v login="$1" '
+    /^[[:space:]]*machines[[:space:]]*=[[:space:]]*\{[[:space:]]*$/ { inm = 1; next }
+    inm && /^[[:space:]]*\};/ { inm = 0 }
+    inm && $2 == "=" && $3 == "\"" login "\";" { hits[++n] = $1 }
+    END { if (n == 1) print hits[1]; else exit 1 }
+  ' "${DOTFILES_DIR:-.}/flake.nix"
+}
+
+# Read one shared `key = value;` line from flake.nix (agents, cleanup,
+# platform). Strings print without their quotes; missing keys print
+# nothing.
+flake_value() {
+  sed -nE 's/^[[:space:]]*'"$1"'[[:space:]]*=[[:space:]]*"?([^";]+)"?;.*/\1/p' \
+    "${DOTFILES_DIR:-.}/flake.nix" | head -n1
+}
+
 # Verification report, the last phase of run_imperative. Deliberately never
 # fails: rebuild.sh must stay safe to run at any time, so a logged-out glab
 # or a missing tool is a warn line, not an exit code. Runs in a subshell so

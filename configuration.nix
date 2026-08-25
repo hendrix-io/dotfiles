@@ -1,11 +1,11 @@
-{ user, agents, lib, ... }:
+{ user, agents, platform, cleanup, lib, ... }:
 
 {
   # Determinate manages the Nix daemon itself, so nix-darwin must not.
   nix.enable = false;
 
   nixpkgs.config.allowUnfree = true;
-  nixpkgs.hostPlatform = "aarch64-darwin"; # bootstrap.sh rewrites this to match uname -m
+  nixpkgs.hostPlatform = platform; # per machine, from flake.nix's machines block
 
   system.primaryUser = user;
   users.users.${user} = {
@@ -34,14 +34,9 @@
   };
   homebrew = {
     enable = true;
-    # A per-machine choice, asked once by bootstrap.sh (which rewrites this
-    # line) and committed to your fork like the username and platform.
-    # "uninstall" converges: every brew formula and cask not declared here
-    # is removed on each switch - the end state once the lists reflect what
-    # you actually want. "none" adopts: install what's listed, keep
-    # everything an existing machine already has.
-    # Never "zap": that would additionally purge removed casks' app data.
-    onActivation.cleanup = "uninstall";
+    # Per machine, from flake.nix's machines block - see the choice docs
+    # there ("uninstall" converges, "none" adopts, never "zap").
+    onActivation.cleanup = cleanup;
     onActivation.autoUpdate = true;
     onActivation.extraFlags = [ "--force" ];
     brews = [

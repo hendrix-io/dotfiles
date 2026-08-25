@@ -11,14 +11,14 @@
 . sh/agent-installs.sh
 . sh/skill-installs.sh
 
-# The agents flag lives in flake.nix (bootstrap asks once and rewrites it),
-# so the nix layer and this one gate on the same committed value. An
-# unparseable or missing line warns and defaults to enabled, which matches
-# checkouts that predate the flag - and mirrors nix, which would fail eval
-# outright if the binding disappeared.
+# The agents flag lives in flake.nix, shared by every machine, so the nix
+# layer and this one gate on the same committed value. An unparseable or
+# missing line warns and defaults to enabled, which matches checkouts that
+# predate the flag - and mirrors nix, which would fail eval outright if
+# the binding disappeared.
 agents_enabled() {
   local v
-  v="$(sed -nE 's/^[[:space:]]*agents[[:space:]]*=[[:space:]]*(true|false)[[:space:]]*;.*/\1/p' "${DOTFILES_DIR:-.}/flake.nix" | head -n1)"
+  v="$(flake_value agents)"
   if [ -z "$v" ]; then
     warn "Could not read the agents flag from flake.nix; assuming enabled."
     v="true"

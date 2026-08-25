@@ -39,16 +39,15 @@ cd ~/dotfiles
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` does eight things, in order:
+`bootstrap.sh` does seven things, in order:
 
 1. Installs Determinate Nix, if it isn't already installed.
 2. Symlinks this repo to `~/.dotfiles` (home.nix resolves its file links through that path).
-3. Checks the `user` in `flake.nix` against your macOS username and offers to fix a mismatch.
-4. Checks `nixpkgs.hostPlatform` against your CPU (`uname -m`) and rewrites it if it's wrong - no question asked, uname knows better.
-5. Asks whether brew packages missing from the repo's lists should be uninstalled whenever the config is applied, and writes your answer into `configuration.nix` (see [Homebrew cleanup](#homebrew-cleanup)).
-6. Asks whether to install the AI/agent tooling (Claude Code, Codex, firstmate, gnhf, no-mistakes, herdr, the skills, the `AGENTS.md` links), and writes your answer into `flake.nix`. Answer **n** for a plain development machine with none of it.
-7. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
-8. Runs the imperative layer in phases: machine setup (auth, local files), global tools (node, pnpm, bun, openspec), the agent fleet and skills (if enabled), and a verification report.
+3. Identifies the machine: matches your login against the `machines` map in `flake.nix` and remembers the label in `~/.dotfiles-machine` (the only per-machine state outside the repo).
+4. Checks the declared platform against your CPU (`uname -m`) and stops on a mismatch.
+5. Shows the committed choices - the agents flag and the Homebrew cleanup mode (see [Homebrew cleanup](#homebrew-cleanup)) - and asks for one go-ahead before anything destructive can run.
+6. Runs the first `darwin-rebuild switch`, which builds the whole declarative layer.
+7. Runs the imperative layer in phases: machine setup (auth, local files), global tools (node, pnpm, bun, openspec), the agent fleet and skills (if enabled), and a verification report.
 
 Auth is the only part that needs you at the keyboard. Everything else is unattended.
 
@@ -57,14 +56,14 @@ Auth is the only part that needs you at the keyboard. Everything else is unatten
 This repo is written so someone who isn't me can clone it and run
 `./bootstrap.sh` on a Mac that already has stuff on it. What to expect:
 
-- **Your username**: step 3 of bootstrap notices `flake.nix` says `aessex`
-  and offers to rewrite it to your login. Say yes. That leaves a one-line
-  local edit in your clone - fork the repo first if you ever want to push
-  your own changes.
-- **Your existing apps and brew packages survive.** Bootstrap asks
-  whether brew packages missing from this repo's lists should be
-  uninstalled; answer **n** (the default) and Homebrew installs what's
-  listed here and touches nothing else. One caveat: casks install with
+- **Your username**: step 3 of bootstrap matches your login against the
+  `machines` map in `flake.nix`. No entry will match you - add a line for
+  your Mac (`mylabel = "mylogin";`), and fork the repo first if you ever
+  want to push your own changes.
+- **Your existing apps and brew packages survive** - as long as
+  `cleanup` in `flake.nix` is `"none"`, which makes Homebrew install
+  what's listed here and touch nothing else. Keep it that way until the
+  lists include everything you want. One caveat: casks install with
   `--force`, so if you already have Ghostty installed manually, brew
   replaces that copy with its own.
 - **Your existing dotfiles are backed up, not deleted.** Files this repo
@@ -148,11 +147,11 @@ config. That part is manual, in this order:
    nvim ~/.zshrc.local       # paste keepers from ~/.zshrc.hm-backup
    ```
 
-4. Commit the machine-specific rewrites to your fork:
+4. Commit your machine's entry to your fork:
 
    ```sh
-   git add flake.nix configuration.nix
-   git commit -m "chore: my username and platform"
+   git add flake.nix
+   git commit -m "chore: add my machine"
    git push
    ```
 
@@ -262,9 +261,10 @@ them every time the config is applied (bootstrap's first run, and each
 later `./rebuild.sh`), which keeps the machine matching the repo exactly -
 that's what my machine runs. `"none"` leaves them alone - the right answer
 for a machine with an existing Homebrew, until the lists cover everything
-you want to keep. Bootstrap asks which you want and writes the answer into
-the file; commit it to your fork like the username. It is deliberately
-never `"zap"`, which would also delete removed casks' app data.
+you want to keep. The mode is the `cleanup` value in `flake.nix`;
+bootstrap shows it and asks for a go-ahead before the first switch. It
+is deliberately never `"zap"`, which would also delete removed casks'
+app data.
 
 ## Structure
 

@@ -41,8 +41,14 @@ if [ -L "$HOME/.claude/settings.json" ] && [ -e "$HOME/.claude/settings.json" ];
   cp -L "$HOME/.claude/settings.json" "$HOME/.claude/settings.json.pre-migration"
 fi
 
-info "Applying the declarative config..."
-sudo darwin-rebuild switch --flake ~/.dotfiles#mac
+if ! MACHINE="$(machine_label)"; then
+  err "Login \"$(whoami)\" matches no machine in flake.nix's machines block."
+  err "Pick one by hand: echo <label> > ~/.dotfiles-machine"
+  exit 1
+fi
+
+info "Applying the declarative config for machine \"$MACHINE\"..."
+sudo darwin-rebuild switch --flake ~/.dotfiles#"$MACHINE"
 success "System config applied"
 
 # INTERACTIVE=0: auth problems warn instead of prompting, so a routine
