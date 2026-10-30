@@ -4,7 +4,7 @@
 
 # Dedupe PATH automatically. `path` and `PATH` stay tied together, so appending
 # the same entry twice is a no-op instead of growing the variable forever.
-typeset -U path PATH
+typeset -U path PATH fpath FPATH
 
 # Homebrew prefix, without paying for `brew --prefix` on every shell start.
 if [ -x /opt/homebrew/bin/brew ]; then
@@ -60,28 +60,39 @@ autoload -Uz compinit && compinit
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 
 if [ -s "$NVM_DIR/nvm.sh" ]; then
-  . "$NVM_DIR/nvm.sh"
+  # --no-use skips nvm's slow default-version resolution (~1s per shell);
+  # put the default node on PATH directly instead.
+  . "$NVM_DIR/nvm.sh" --no-use
+  _nvm_default="$NVM_DIR/versions/node/$(<"$NVM_DIR/alias/default")"
+  if [ -d "$_nvm_default/bin" ]; then
+    path=("$_nvm_default/bin" $path)
+  else
+    nvm use default --silent   # alias isn't a plain version (e.g. lts/*): slow path
+  fi
+  unset _nvm_default
   [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 
   # Must come after nvm is loaded - load-nvmrc calls nvm_find_nvmrc.
   autoload -U add-zsh-hook
 
   load-nvmrc() {
-    local nvmrc_path
+    local nvmrc_path current want node_bin
     nvmrc_path="$(nvm_find_nvmrc)"
+    node_bin="$(command -v node)"
+    # Version of the active nvm-managed node, e.g. v24.15.0 (empty if not nvm's)
+    [[ $node_bin == $NVM_DIR/versions/node/* ]] && current=${${node_bin#$NVM_DIR/versions/node/}%%/*}
 
-    if [ -n "$nvmrc_path" ]; then
-      local nvmrc_node_version
-      nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
-
-      if [ "$nvmrc_node_version" = "N/A" ]; then
-        nvm install
-      elif [ "$nvmrc_node_version" != "$(nvm version)" ]; then
-        nvm use
+    if [[ -n $nvmrc_path ]]; then
+      want=$(<"$nvmrc_path"); want=${want//[[:space:]]/}
+      [[ $want == v* ]] || want="v$want"
+      [[ $want == "$current" ]] && return     # already on it: no nvm calls
+      nvm use || nvm install                  # only when actually switching
+    else
+      local default=$(<"$NVM_DIR/alias/default")
+      if [[ -n $current && $current != "$default" ]]; then
+        echo "Reverting to nvm default version"
+        nvm use default --silent
       fi
-    elif [ -n "$(PWD=$OLDPWD nvm_find_nvmrc)" ] && [ "$(nvm version)" != "$(nvm version default)" ]; then
-      echo "Reverting to nvm default version"
-      nvm use default
     fi
   }
 
