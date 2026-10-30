@@ -120,6 +120,27 @@ setup_zshrc_local() {
   fi
 }
 
+setup_login_shell() {
+  # nix-darwin ships its own zsh (5.9.1 at the time of writing) alongside
+  # Apple's /bin/zsh (5.9). New terminals start the login shell; `zsh` on PATH
+  # is nix's. Two versions invalidate each other's ~/.zcompdump, so every new
+  # tab rebuilt completions (~3s). configuration.nix lists nix's zsh in
+  # /etc/shells (environment.shells); this makes it the login shell.
+  local nix_zsh=/run/current-system/sw/bin/zsh
+  local current
+  current="$(dscl . -read "/Users/$(whoami)" UserShell 2>/dev/null | awk '{print $2}')"
+  if [ "$current" = "$nix_zsh" ]; then
+    info "Login shell is nix's zsh."
+  elif ! grep -qx "$nix_zsh" /etc/shells; then
+    warn "$nix_zsh is not in /etc/shells yet. Re-run after a successful switch."
+  elif [ "${INTERACTIVE:-0}" = "1" ]; then
+    info "Switching login shell to $nix_zsh (asks for your password)..."
+    chsh -s "$nix_zsh" || warn "chsh did not complete. Run: chsh -s $nix_zsh"
+  else
+    warn "Login shell is $current, not nix's zsh. Run: chsh -s $nix_zsh"
+  fi
+}
+
 run_machine_setup() {
   repair_git_ownership
   migrate_gh_config
@@ -127,5 +148,6 @@ run_machine_setup() {
   auth_gitlab
   setup_gitconfig_local
   setup_zshrc_local
+  setup_login_shell
   setup_claude_settings
 }

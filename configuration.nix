@@ -1,4 +1,4 @@
-{ user, agents, platform, cleanup, lib, ... }:
+{ user, agents, platform, cleanup, lib, pkgs, ... }:
 
 {
   # Determinate manages the Nix daemon itself, so nix-darwin must not.
@@ -12,6 +12,22 @@
     home = "/Users/${user}";
   };
   system.stateVersion = 6;
+
+  # Register nix's zsh in /etc/shells so it can be the login shell
+  # (`chsh -s /run/current-system/sw/bin/zsh`). Otherwise Ghostty starts
+  # Apple's /bin/zsh 5.9 while `zsh` on PATH is nix's 5.9.1, and the two
+  # versions keep invalidating each other's ~/.zcompdump.
+  environment.shells = [ pkgs.zsh ];
+
+  # The global /etc/zshrc would run its own compinit (plus promptinit and
+  # bashcompinit). home/.zshrc runs compinit itself with a different fpath,
+  # so the two kept invalidating ~/.zcompdump and rebuilding it every shell.
+  # fpath is still set in /etc/zshenv, so nothing is lost.
+  programs.zsh = {
+    enableCompletion = false;
+    enableBashCompletion = false;
+    promptInit = "";
+  };
 
   system.defaults = {
     NSGlobalDomain = {
